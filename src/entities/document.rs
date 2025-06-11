@@ -13,10 +13,10 @@ struct Document {
 }
 
 impl Document {
-    fn new(self, path: PathBuf) -> Self {
+    fn new(path: PathBuf) -> Self {
         Document {
-            content: self.extract_content(&path),
-            mime_type: self.extract_mime_type(&path),
+            content: Document::extract_content(&path),
+            mime_type: Document::extract_mime_type(&path),
         }
     }
 
