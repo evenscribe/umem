@@ -20,11 +20,11 @@ impl Document {
         }
     }
 
-    fn extract_mime_type(&self, path: &PathBuf) -> MimeType {
+    fn extract_mime_type(path: &PathBuf) -> MimeType {
         todo!()
     }
 
-    fn extract_content(&self, path: &PathBuf) -> Vec<u8> {
+    fn extract_content(path: &PathBuf) -> Vec<u8> {
         todo!()
     }
 }
