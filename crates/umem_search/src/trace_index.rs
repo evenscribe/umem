@@ -25,7 +25,7 @@ impl TraceIndex {
         let schema = index.schema();
         let mut index_writer = index.writer_with_num_threads(num_cpus::get() / 2, 100_000_000)?;
         index_writer.add_document(doc!(
-            schema.get_field(CONTENT)? => &trace.content[..]
+            schema.get_field(CONTENT)? => *String::from_utf8_lossy(&trace.content[..])
         ))?;
         index_writer.commit()?;
         index_writer.wait_merging_threads()?;
