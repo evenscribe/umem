@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = { workspace = true }
-dirs = "6.0.0"
+directories = "6.0.0"
 memmap2 = "0.9.5"
 mime = "0.3.17"
 mime_guess = "2.0.5"
