@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use std::fs;
-use std::path::PathBuf;
+use std::path::Path;
 use tantivy::collector::TopDocs;
 use tantivy::directory::MmapDirectory;
 use tantivy::query::QueryParser;
@@ -15,12 +15,12 @@ pub struct TraceIndex;
 const CONTENT: &str = "content";
 
 impl TraceIndex {
-    pub fn create_index(path: PathBuf) -> Result<()> {
+    pub fn create_index<P: AsRef<Path>>(path: P) -> Result<()> {
         Self::create_index_path(&path)?;
         Self::build_schema(&path)
     }
 
-    pub fn add_trace(index_path: PathBuf, trace: Trace) -> Result<()> {
+    pub fn add_trace<P: AsRef<Path>>(index_path: P, trace: Trace) -> Result<()> {
         let index = Index::open_in_dir(&index_path)?;
         let schema = index.schema();
         let mut index_writer = index.writer_with_num_threads(num_cpus::get() / 2, 100_000_000)?;
@@ -32,7 +32,7 @@ impl TraceIndex {
         Ok(())
     }
 
-    pub fn parse_and_search(index_path: &PathBuf, query: &str) -> Result<String> {
+    pub fn parse_and_search<P: AsRef<Path>>(index_path: P, query: &str) -> Result<String> {
         let index = Index::open_in_dir(index_path)?;
         let content = index.schema().get_field(CONTENT)?;
         let query_parser =
@@ -63,14 +63,14 @@ impl TraceIndex {
         schema_builder.add_text_field(field_name, text_options);
     }
 
-    fn create_index_path(path: &PathBuf) -> Result<()> {
-        if !path.exists() {
+    fn create_index_path<P: AsRef<Path>>(path: &P) -> Result<()> {
+        if !path.as_ref().exists() {
             fs::create_dir(path)?;
         }
         Ok(())
     }
 
-    fn build_schema(path: &PathBuf) -> Result<()> {
+    fn build_schema<P: AsRef<Path>>(path: &P) -> Result<()> {
         if !Index::exists(&MmapDirectory::open(path)?)? {
             let mut schema_builder = SchemaBuilder::default();
             Self::add_text_field(CONTENT, &mut schema_builder);
