@@ -3,4 +3,14 @@ name = "umem"
 version = "0.1.0"
 edition = "2021"
 
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.dependencies]
+umem_search = {path = "crates/umem_search"}
+anyhow = "1.0.98"
+
 [dependencies]
+umem_search = { workspace = true }
+anyhow = { workspace = true }
