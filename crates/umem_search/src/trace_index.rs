@@ -73,7 +73,7 @@ impl TraceIndex {
 
     fn create_index_path<P: AsRef<Path>>(path: &P) -> Result<()> {
         if !path.as_ref().exists() {
-            fs::create_dir(path)?;
+            fs::create_dir_all(path)?;
         }
         Ok(())
     }
