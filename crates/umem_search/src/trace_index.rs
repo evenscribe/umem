@@ -1,18 +1,20 @@
-use anyhow::{Context, Result};
-use std::fs;
-use std::path::Path;
-use tantivy::collector::TopDocs;
-use tantivy::directory::MmapDirectory;
-use tantivy::query::QueryParser;
-use tantivy::schema::{IndexRecordOption, SchemaBuilder, TextFieldIndexing, TextOptions};
-use tantivy::tokenizer::TokenizerManager;
-use tantivy::{doc, Document, Index, TantivyDocument};
-
 use crate::trace::Trace;
+use anyhow::Result;
+use std::{fs, path::Path};
+use tantivy::{
+    collector::TopDocs,
+    directory::MmapDirectory,
+    doc,
+    query::QueryParser,
+    schema::{IndexRecordOption, SchemaBuilder, TextFieldIndexing, TextOptions},
+    tokenizer::TokenizerManager,
+    Document, Index, TantivyDocument,
+};
 
 pub struct TraceIndex;
 
 const CONTENT: &str = "content";
+const DEFAULT_SEARCH_COUNT: usize = 10;
 
 impl TraceIndex {
     pub fn create_index<P: AsRef<Path>>(path: P) -> Result<()> {
@@ -32,7 +34,12 @@ impl TraceIndex {
         Ok(())
     }
 
-    pub fn parse_and_search<P: AsRef<Path>>(index_path: P, query: &str) -> Result<String> {
+    pub fn parse_and_search<P: AsRef<Path>>(
+        index_path: P,
+        query: &str,
+        count: Option<usize>,
+    ) -> Result<Vec<String>> {
+        let count = count.unwrap_or(DEFAULT_SEARCH_COUNT);
         let index = Index::open_in_dir(index_path)?;
         let content = index.schema().get_field(CONTENT)?;
         let query_parser =
@@ -40,14 +47,15 @@ impl TraceIndex {
         let reader = index.reader()?;
         let searcher = reader.searcher();
         let query = query_parser.parse_query(query)?;
-        let (_, doc_address) = searcher
-            .search(&query, &TopDocs::with_limit(1))?
-            .into_iter()
-            .next()
-            .context("No search result found.")?;
-        Ok(searcher
-            .doc::<TantivyDocument>(doc_address)?
-            .to_json(&index.schema()))
+        let mut results = Vec::with_capacity(DEFAULT_SEARCH_COUNT);
+        for (_, doc_address) in searcher.search(&query, &TopDocs::with_limit(count))? {
+            results.push(
+                searcher
+                    .doc::<TantivyDocument>(doc_address)?
+                    .to_json(&index.schema()),
+            );
+        }
+        Ok(results)
     }
 
     fn add_text_field(field_name: &str, schema_builder: &mut SchemaBuilder) {
