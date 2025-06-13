@@ -11,6 +11,7 @@ members = ["crates/*"]
 umem_search = {path = "crates/umem_search"}
 umem_doc_parser = {path = "crates/umem_doc_parser"}
 anyhow = "1.0.98"
+lazy_static = "1.5.0"
 
 [dependencies]
 umem_search = { workspace = true }
