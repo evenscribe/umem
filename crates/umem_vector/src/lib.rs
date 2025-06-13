@@ -23,10 +23,7 @@ impl Clone for QdrantClientWrapper {
 
 impl QdrantClientWrapper {
     pub fn new(url: &str, api_key: &str) -> Result<Self> {
-        let client = Qdrant::from_url(url)
-            .api_key(api_key)
-            .skip_compatibility_check()
-            .build()?;
+        let client = Qdrant::from_url(url).api_key(api_key).build()?;
         Ok(QdrantClientWrapper {
             client: Arc::new(client),
         })
@@ -267,4 +264,3 @@ mod tests {
         Ok(())
     }
 }
-
