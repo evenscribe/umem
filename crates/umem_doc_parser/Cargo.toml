@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 pandoc = "0.8.11"
 anyhow = { workspace = true}
+extractous = "0.3.0"
