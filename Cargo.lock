@@ -2467,6 +2467,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "umem_grpc_server"
+version = "0.1.0"
+
+[[package]]
 name = "umem_search"
 version = "0.1.0"
 dependencies = [
