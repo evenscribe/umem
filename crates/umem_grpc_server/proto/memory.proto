@@ -1,0 +1,79 @@
+import "google/protobuf/empty.proto";
+
+syntax = "proto3";
+
+package memory;
+
+service Memory {
+  rpc AddMemory(Memory) returns (AddMemoryResponse);
+  rpc GetMemory(GetMemoryRequest) returns (Memory);
+  rpc DeleteMemory(DeleteMemoryRequest) returns (google.protobuf.Empty);
+  rpc UpdateMemory(Memory) returns (google.protobuf.Empty);
+  rpc ListMemories(google.protobuf.Empty) returns (ListMemoriesResponse);
+}
+
+enum MemoryKind {
+  PlainText = 0;
+  Url = 1;
+  Image = 2;
+  File = 2;
+}
+
+enum MemoryStatus {
+  Pending = 0;
+  Processing = 1;
+  Success = 2;
+  Deleted = 3;
+}
+
+message Memory {
+  string id = 1; // Optional ID for the memory, if not provided, a new one will
+  // be generated
+  string title = 2;
+  string summary = 3;
+  string custom_id = 4; // Optional custom ID for the memory
+  MemoryKind kind = 5;  // Required
+  string content = 6; // Required - could be either a base64 encoded string for
+  // images or plain text for other types or url for Url
+  repeated string tags = 7; // Optional tags for the memory
+  string metadata = 8;      // Optional metadata in JSON format, can be used for
+  // filtering and sorting operations, type: Record<string, string>
+  string created_at = 9;    // Optional creation date in ISO 8601 format
+  string updated_at = 10;   // Optional update date in ISO 8601 format
+  MemoryStatus status = 11; // Optional status of the memory, default is Pending
+  string raw_content = 12;  // Optional raw content, can be used for storing
+  // original content before processing
+  string user_id = 13; // Optional user ID for the memory, can be used for
+  // multi-user support
+  string token = 14; // Optional token for the memory, can be used for
+  // authentication or authorization purposes
+}
+
+message GetMemoryRequest { string id = 1; }
+
+message AddMemoryResponse {
+  string id = 1;
+  Memory memory = 2;
+}
+
+message DeleteMemoryRequest { string id = 1; }
+
+message ListMemoriesRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  repeated string tags = 7;
+  SortBy sort_by = 4; // Optional sorting criteria
+  string filters = 5
+}
+
+message ListMemoriesResponse {
+  repeated Memory memories = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message SortBy {
+  string field = 1; // Field to sort by, e.g., "created_at", "title"
+  string order = 2; // Order of sorting, "asc" or "desc"
+}
