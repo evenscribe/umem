@@ -1,22 +1,22 @@
-import "google/protobuf/empty.proto";
-
 syntax = "proto3";
+
+import "google/protobuf/empty.proto";
 
 package memory;
 
-service Memory {
+service MemoryService {
   rpc AddMemory(Memory) returns (AddMemoryResponse);
   rpc GetMemory(GetMemoryRequest) returns (Memory);
   rpc DeleteMemory(DeleteMemoryRequest) returns (google.protobuf.Empty);
   rpc UpdateMemory(Memory) returns (google.protobuf.Empty);
-  rpc ListMemories(google.protobuf.Empty) returns (ListMemoriesResponse);
+  rpc ListMemories(ListMemoriesRequest) returns (ListMemoriesResponse);
 }
 
 enum MemoryKind {
   PlainText = 0;
   Url = 1;
   Image = 2;
-  File = 2;
+  File = 3;
 }
 
 enum MemoryStatus {
@@ -63,7 +63,7 @@ message ListMemoriesRequest {
   int32 limit = 2;
   repeated string tags = 7;
   SortBy sort_by = 4; // Optional sorting criteria
-  string filters = 5
+  string filters = 5;
 }
 
 message ListMemoriesResponse {

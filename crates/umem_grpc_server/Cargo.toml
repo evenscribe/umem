@@ -1,6 +1,16 @@
 [package]
 name = "umem_grpc_server"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
+tonic = "0.12"
+prost = "0.13"
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+uuid = { version = "1.0", features = ["v4"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+
+[build-dependencies]
+tonic-build = "0.12"
