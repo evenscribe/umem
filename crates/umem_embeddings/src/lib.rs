@@ -2,26 +2,26 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
-struct EmbeddingRequest {
+pub struct EmbeddingRequest {
     text: Vec<String>,
 }
 
 #[derive(Deserialize, Debug)]
-struct EmbeddingResponse {
+pub struct EmbeddingResponse {
     result: EmbeddingResult,
     errors: Vec<String>,
     success: bool,
 }
 
 #[derive(Deserialize, Debug)]
-struct EmbeddingUsage {
+pub struct EmbeddingUsage {
     prompt_tokens: usize,
     completion_tokens: usize,
     total_tokens: usize,
 }
 
 #[derive(Deserialize, Debug)]
-struct EmbeddingResult {
+pub struct EmbeddingResult {
     shape: Vec<usize>,
     data: Vec<Vec<f32>>,
     usage: EmbeddingUsage,
@@ -64,7 +64,6 @@ impl EmbeddingsGenerator {
             .await?;
 
         let embedding_response: EmbeddingResponse = response.json().await?;
-        dbg!("Embedding response: {:?}", &embedding_response);
 
         Ok(embedding_response.result.data)
     }
