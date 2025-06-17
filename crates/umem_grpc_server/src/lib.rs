@@ -44,9 +44,7 @@ impl MemoryService for MemoryServiceImpl {
             memory.updated_at = memory.created_at.clone();
         }
 
-        if memory.status == MemoryStatus::Pending as i32 {
-            memory.status = MemoryStatus::Pending as i32;
-        }
+        memory.status = MemoryStatus::Pending as i32;
 
         let memory_id = memory.id.clone();
         let memory_clone = memory.clone();
