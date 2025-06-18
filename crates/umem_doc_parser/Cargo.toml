@@ -4,5 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-pandoc = "0.8.11"
 anyhow = { workspace = true}
+lazy_static = { workspace = true}
+extractous = "0.3.0"
+

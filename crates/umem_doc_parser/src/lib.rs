@@ -1,14 +1,25 @@
 use anyhow::Result;
-use pandoc::{OutputFormat, OutputKind, PandocOutput};
+use extractous::{PdfParserConfig, TesseractOcrConfig};
 use std::path::Path;
 
-pub fn parse_to_plaintext<P: AsRef<Path>>(path: P) -> Result<String> {
-    let mut pandoc = pandoc::new();
-    pandoc.add_input(&path);
-    pandoc.set_output_format(OutputFormat::Plain, Vec::new());
-    pandoc.set_output(OutputKind::Pipe);
-    if let PandocOutput::ToBuffer(buffer) = pandoc.execute()? {
-        return Ok(buffer);
+lazy_static::lazy_static! {
+    static ref EXTRACTOR: extractous::Extractor = {
+        extractous::Extractor::new()
+            .set_ocr_config(TesseractOcrConfig::new())
+            .set_pdf_config(PdfParserConfig::new())
     };
-    unreachable!()
+}
+
+pub struct Extractor;
+
+impl Extractor {
+    pub fn file_to_string<P: AsRef<Path>>(path: P) -> Result<String> {
+        Ok(EXTRACTOR
+            .extract_file_to_string(path.as_ref().to_string_lossy().as_ref())?
+            .0)
+    }
+
+    pub fn url_to_string(url: String) -> Result<String> {
+        Ok(EXTRACTOR.extract_url_to_string(&url)?.0)
+    }
 }
