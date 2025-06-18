@@ -11,7 +11,7 @@ env:
 
 jobs:
   build:
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
@@ -20,7 +20,7 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
     
     - name: Cache cargo registry
-      uses: useblacksmith/cache@v5
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/registry
