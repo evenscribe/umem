@@ -18,7 +18,10 @@ jobs:
     
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
-    
+
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v3    
+      
     - name: Cache cargo registry
       uses: useblacksmith/cache@v5
       with:
