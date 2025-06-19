@@ -10,6 +10,7 @@ members = ["crates/*"]
 [workspace.dependencies]
 umem_search = {path = "crates/umem_search"}
 umem_doc_parser = {path = "crates/umem_doc_parser"}
+umem_embeddings = {path = "crates/umem_embeddings"}
 umem_vector = {path = "crates/umem_vector"}
 umem_grpc_server = {path = "crates/umem_grpc_server"}
 anyhow = "1.0.98"
