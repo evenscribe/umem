@@ -18,7 +18,10 @@ jobs:
     
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
-    
+
+    - name: Install Protoc
+      run: sudo apt-get install protobuf-compiler
+      
     - name: Cache cargo registry
       uses: useblacksmith/cache@v5
       with:
