@@ -1,0 +1,11 @@
+[package]
+name = "umem_web_scrapper"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+reqwest = { version = "0.12.20" , features = ["cookies"]}
+anyhow = { workspace = true}
+lazy_static = { workspace = true}
+tokio = { workspace = true}
+url = "2.5.4"
