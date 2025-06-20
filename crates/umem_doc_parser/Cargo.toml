@@ -5,4 +5,11 @@ edition = "2024"
 
 [dependencies]
 pandoc = "0.8.11"
+lopdf = "0.36.0"
 anyhow = { workspace = true}
+umem_web_scrapper = { workspace = true}
+mdka = "1.5.4"
+
+[dev-dependencies]
+tempfile = "3.20.0"
+tokio = { workspace = true }
