@@ -113,15 +113,15 @@ mod tests {
 
     #[tokio::test]
     async fn summarize_text() {
-        let account_id = dbg!(match std::env::var("ACCOUNT_ID") {
+        let account_id = match std::env::var("ACCOUNT_ID") {
             Ok(id) => id,
             Err(_) => panic!("ACCOUNT_ID environment variable not set"),
-        });
+        };
 
-        let api_key = dbg!(match std::env::var("API_KEY") {
+        let api_key = match std::env::var("API_KEY") {
             Ok(key) => key,
             Err(_) => panic!("API_KEY environment variable not set"),
-        });
+        };
 
         let summarizer = Summarizer::new(
             "@cf/facebook/bart-large-cnn".to_string(),
@@ -133,8 +133,8 @@ mod tests {
 
         let max_length = 10;
 
-        let result = summarizer.summarize(text, max_length).await.unwrap();
-
-        dbg!(result);
+        let result = summarizer.summarize(text, max_length).await;
+        assert!(result.is_ok(), "Summarization failed: {:?}", result.err());
+        println!("Summary: {}", result.unwrap().summary);
     }
 }
