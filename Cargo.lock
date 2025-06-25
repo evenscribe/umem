@@ -3258,10 +3258,13 @@ name = "umem"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "reqwest",
+ "serde",
  "serde_json",
  "tokio",
  "umem_grpc_server",
  "umem_search",
+ "umem_summarizer",
 ]
 
 [[package]]
@@ -3313,6 +3316,17 @@ dependencies = [
  "mime_guess",
  "num_cpus",
  "tantivy",
+]
+
+[[package]]
+name = "umem_summarizer"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
