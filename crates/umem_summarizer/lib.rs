@@ -27,6 +27,27 @@ pub struct Summarizer {
 }
 
 impl Summarizer {
+    /// Creates a new `Summarizer` instance with the specified model name, account ID, and API token.
+    ///
+    /// Initializes the internal HTTP client and stores the provided credentials for API interaction.
+    ///
+    /// # Parameters
+    /// - `model_name`: The identifier of the summarization model to use.
+    /// - `account_id`: The Cloudflare account ID associated with the API.
+    /// - `api_token`: The API token for authentication.
+    ///
+    /// # Returns
+    /// A `Summarizer` configured with the given model and credentials.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let summarizer = Summarizer::new(
+    ///     "@cf/facebook/bart-large-cnn".to_string(),
+    ///     "your_account_id".to_string(),
+    ///     "your_api_token".to_string(),
+    /// );
+    /// ```
     pub fn new(model_name: String, account_id: String, api_token: String) -> Self {
         let client = Client::new();
 
@@ -38,6 +59,37 @@ impl Summarizer {
         }
     }
 
+    /// Sends a request to the remote summarization API and returns the generated summary.
+    ///
+    /// This asynchronous method posts the provided text and maximum summary length to the configured summarization model.
+    /// If the API call is successful, it returns the summary result; otherwise, it returns an error containing the API's error messages.
+    ///
+    /// # Arguments
+    ///
+    /// * `text` - The input text to be summarized.
+    /// * `max_length` - The maximum length of the generated summary.
+    ///
+    /// # Returns
+    ///
+    /// A `SummarizationResult` containing the summary text on success, or an error if the API request fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use umem_summarizer::{Summarizer, SummarizationResult};
+    /// # async fn example() -> anyhow::Result<()> {
+    /// let summarizer = Summarizer::new(
+    ///     "@cf/facebook/bart-large-cnn".to_string(),
+    ///     "your_account_id".to_string(),
+    ///     "your_api_token".to_string(),
+    /// );
+    /// let result: SummarizationResult = summarizer
+    ///     .generate_embeddings("This is a long article that needs summarization.".to_string(), 10)
+    ///     .await?;
+    /// println!("{}", result.summary);
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn generate_embeddings(
         &self,
         text: String,
