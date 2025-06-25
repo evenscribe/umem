@@ -27,6 +27,17 @@ pub struct Summarizer {
 }
 
 impl Summarizer {
+    /// Creates a new `Summarizer` instance with the specified model name, account ID, and API token.
+    ///
+    /// Initializes an HTTP client and stores the provided credentials for use in API requests.
+    ///
+    /// # Parameters
+    /// - `model_name`: The identifier of the AI summarization model to use.
+    /// - `account_id`: The Cloudflare account ID associated with the API.
+    /// - `api_token`: The API token for authenticating requests.
+    ///
+    /// # Returns
+    /// A `Summarizer` configured with the given model and credentials.
     pub fn new(model_name: String, account_id: String, api_token: String) -> Self {
         let client = Client::new();
 
@@ -38,6 +49,28 @@ impl Summarizer {
         }
     }
 
+    /// Sends text to the Cloudflare AI summarization API and returns the summarized result.
+    ///
+    /// Returns an error if the API indicates failure or if the request cannot be completed.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use umem_summarizer::{Summarizer, SummarizationResult};
+    /// # async fn example() -> anyhow::Result<()> {
+    /// let summarizer = Summarizer::new(
+    ///     "@cf/facebook/bart-large-cnn".to_string(),
+    ///     "your_account_id".to_string(),
+    ///     "your_api_token".to_string(),
+    /// );
+    /// let summary = summarizer.summarize(
+    ///     "Unicorns are mythical creatures that have been described since antiquity.",
+    ///     10,
+    /// ).await?;
+    /// println!("{}", summary.summary);
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn summarize(
         &self,
         text: String,
