@@ -19,7 +19,11 @@ pub struct MemoryVectorStore {
     collection_name: String,
 }
 
-impl Clone for MemoryVectorStore {
+impl Clone for QdrantClientWrapper {
+    /// Creates a new `QdrantClientWrapper` instance with cloned client and collection name.
+    ///
+    /// The cloned wrapper shares the same underlying Qdrant client via reference counting,
+    /// while maintaining an independent copy of the collection name.
     fn clone(&self) -> Self {
         MemoryVectorStore {
             client: Arc::clone(&self.client),
@@ -28,7 +32,26 @@ impl Clone for MemoryVectorStore {
     }
 }
 
-impl MemoryVectorStore {
+impl QdrantClientWrapper {
+    /// Asynchronously creates a new `QdrantClientWrapper` for the specified collection.
+    ///
+    /// If the collection does not exist, it is created with a 1024-dimensional vector configuration (cosine distance), HNSW index, 8-bit integer quantization, and a tenant-aware keyword index on the `"group_id"` field.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - The Qdrant server URL.
+    /// * `api_key` - The API key for authentication.
+    /// * `collection_name` - The name of the collection to use or create.
+    ///
+    /// # Returns
+    ///
+    /// A `QdrantClientWrapper` instance configured for the specified collection.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let wrapper = QdrantClientWrapper::new("http://localhost:6333", "my-api-key", "my_collection").await?;
+    /// ```
     pub async fn new(url: &str, api_key: &str, collection_name: &str) -> Result<Self> {
         let client = Qdrant::from_url(url).api_key(api_key).build()?;
 
@@ -64,6 +87,19 @@ impl MemoryVectorStore {
         })
     }
 
+    /// Inserts a single vector embedding with an associated payload and user ID into the collection.
+    ///
+    /// The user ID is added to the payload under the `"group_id"` key to ensure tenant isolation. A new UUID is generated as the point ID for the inserted vector.
+    ///
+    /// # Arguments
+    ///
+    /// * `payload` - The payload data to associate with the vector.
+    /// * `vectors` - The vector embedding to insert.
+    /// * `user_id` - The user identifier to associate with the point.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if the insertion succeeds; otherwise, returns an error.
     pub async fn insert_embedding(
         &self,
         mut payload: Payload,
@@ -89,6 +125,19 @@ impl MemoryVectorStore {
     /**
      * (Payload, Embeddings, user_id)
      */
+    /// Inserts multiple vector embeddings with associated payloads and user IDs in bulk.
+    ///
+    /// Each tuple in the input vector contains a payload, a vector, and a user ID. The user ID is added to the payload under the `"group_id"` key, and each point is assigned a new UUID as its ID. All points are upserted into the collection in a single batch operation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let points = vec![
+    ///     (payload1, vec![0.1, 0.2, 0.3], "user1"),
+    ///     (payload2, vec![0.4, 0.5, 0.6], "user2"),
+    /// ];
+    /// wrapper.insert_embeddings_bulk(points).await?;
+    /// ```
     pub async fn insert_embeddings_bulk<I>(
         &self,
         mut points: Vec<(Payload, Vec<f32>, &str)>,
@@ -111,6 +160,26 @@ impl MemoryVectorStore {
         Ok(())
     }
 
+    /// Performs a vector similarity search within the stored collection, returning results filtered by user ID.
+    ///
+    /// Searches for points most similar to the provided vector, limiting results to those where the `"group_id"` payload matches the given user ID. The number of results returned can be controlled with the `limit` parameter (default is 10).
+    ///
+    /// # Parameters
+    /// - `vector`: The query vector to search against.
+    /// - `limit`: Optional maximum number of results to return (defaults to 10 if not specified).
+    /// - `user_id`: The user identifier used to filter search results by `"group_id"`.
+    ///
+    /// # Returns
+    /// A `SearchResponse` containing the matching points and their payloads.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let response = wrapper
+    ///     .search_with_vector(query_vector, Some(5), "user123")
+    ///     .await?;
+    /// assert!(response.result.len() <= 5);
+    /// ```
     pub async fn search_with_vector(
         &self,
         vector: Vec<f32>,
@@ -133,6 +202,28 @@ impl MemoryVectorStore {
         Ok(search_result)
     }
 
+    /// Performs a filtered vector similarity search on a specified collection, including tenant isolation.
+    ///
+    /// Adds a filter condition to restrict results to points where the `"group_id"` matches the wrapper's collection name. Combines this with any additional provided filter conditions. Returns search results with payloads included.
+    ///
+    /// # Parameters
+    /// - `collection_name`: The name of the collection to search.
+    /// - `vector`: The query vector for similarity search.
+    /// - `filter`: Additional filter conditions to apply (combined with tenant isolation).
+    /// - `limit`: Optional maximum number of results to return (defaults to 10).
+    ///
+    /// # Returns
+    /// The search response containing matching points and their payloads.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut conditions = vec![Condition::matches("status", "active")];
+    /// let response = wrapper
+    ///     .filtered_search_with_vector("my_collection", query_vec, conditions, Some(5))
+    ///     .await?;
+    /// assert!(response.result.len() <= 5);
+    /// ```
     pub async fn filtered_search_with_vector(
         &self,
         collection_name: &str,
