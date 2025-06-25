@@ -13,22 +13,22 @@ use uuid::Uuid;
 
 const GROUP_ID: &str = "group_id";
 
-pub struct QdrantClientWrapper {
+pub struct MemoryVectorStore {
     // TODO: Build a connection pool for QdrantClient
     client: Arc<Qdrant>,
     collection_name: String,
 }
 
-impl Clone for QdrantClientWrapper {
+impl Clone for MemoryVectorStore {
     fn clone(&self) -> Self {
-        QdrantClientWrapper {
+        MemoryVectorStore {
             client: Arc::clone(&self.client),
             collection_name: self.collection_name.clone(),
         }
     }
 }
 
-impl QdrantClientWrapper {
+impl MemoryVectorStore {
     pub async fn new(url: &str, api_key: &str, collection_name: &str) -> Result<Self> {
         let client = Qdrant::from_url(url).api_key(api_key).build()?;
 
@@ -50,7 +50,7 @@ impl QdrantClientWrapper {
                 .create_field_index(
                     CreateFieldIndexCollectionBuilder::new(
                         collection_name,
-                        "group_id",
+                        GROUP_ID,
                         FieldType::Keyword,
                     )
                     .field_index_params(KeywordIndexParamsBuilder::default().is_tenant(true)),
@@ -58,7 +58,7 @@ impl QdrantClientWrapper {
                 .await?;
         }
 
-        Ok(QdrantClientWrapper {
+        Ok(MemoryVectorStore {
             client: Arc::new(client),
             collection_name: collection_name.to_string(),
         })
@@ -139,10 +139,11 @@ impl QdrantClientWrapper {
         vector: Vec<f32>,
         mut filter: Vec<Condition>,
         limit: Option<u64>,
+        user_id: &str,
     ) -> Result<SearchResponse> {
         let limit = limit.unwrap_or(10);
 
-        filter.push(Condition::matches(GROUP_ID, self.collection_name.clone()));
+        filter.push(Condition::matches(GROUP_ID, user_id.to_string()));
 
         let search_result = self
             .client
