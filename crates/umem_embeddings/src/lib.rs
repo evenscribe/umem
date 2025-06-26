@@ -47,6 +47,40 @@ impl EmbeddingsGenerator {
         }
     }
 
+    /// Generates text embeddings for the provided input texts using a remote API.
+    ///
+    /// Sends the input texts to the configured embedding model and returns the resulting embedding vectors.
+    ///
+    /// # Arguments
+    ///
+    /// * `texts` - A vector of input strings to generate embeddings for.
+    ///
+    /// # Returns
+    ///
+    /// A vector of embedding vectors, where each inner vector corresponds to the embedding of an input text.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the HTTP request fails or if the response cannot be deserialized.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # async fn example() -> anyhow::Result<()> {
+    /// let generator = EmbeddingsGenerator::new(
+    ///     "model_name".to_string(),
+    ///     "account_id".to_string(),
+    ///     "api_token".to_string(),
+    /// );
+    /// let texts = vec![
+    ///     "Hello, world!".to_string(),
+    ///     "How are you?".to_string(),
+    /// ];
+    /// let embeddings = generator.generate_embeddings(texts).await?;
+    /// assert_eq!(embeddings.len(), 2);
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn generate_embeddings(&self, texts: Vec<String>) -> anyhow::Result<Vec<Vec<f32>>> {
         let url = format!(
             "https://api.cloudflare.com/client/v4/accounts/{}/ai/run/{}",
