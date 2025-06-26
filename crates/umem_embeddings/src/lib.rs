@@ -68,3 +68,34 @@ impl EmbeddingsGenerator {
         Ok(embedding_response.result.data)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn summarize_text() {
+        let account_id = match std::env::var("ACCOUNT_ID") {
+            Ok(id) => id,
+            Err(_) => panic!("ACCOUNT_ID environment variable not set"),
+        };
+
+        let api_key = match std::env::var("API_KEY") {
+            Ok(key) => key,
+            Err(_) => panic!("API_KEY environment variable not set"),
+        };
+
+        let embedder = EmbeddingsGenerator::new("@cf/baai/bge-m3".to_string(), account_id, api_key);
+
+        let text = vec![
+            "This is a story about an orange cloud".to_string(),
+            "This is a story about a llama".to_string(),
+            "This is a story about a hugging emoji".to_string(),
+        ];
+
+        let result = embedder.generate_embeddings(text).await;
+
+        assert!(result.is_ok(), "Embeddings failed: {:?}", result.err());
+        println!("Summary: {:?}", result.unwrap());
+    }
+}
