@@ -3285,6 +3285,7 @@ name = "umem_embeddings"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "lazy_static",
  "reqwest",
  "serde",
  "serde_json",
@@ -3296,12 +3297,15 @@ name = "umem_grpc_server"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "lazy_static",
  "prost",
  "serde",
  "serde_json",
  "tokio",
  "tonic 0.12.3",
  "tonic-build",
+ "umem_embeddings",
+ "umem_vector",
  "uuid",
 ]
 
