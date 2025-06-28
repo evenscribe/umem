@@ -1,5 +1,12 @@
+use lazy_static::lazy_static;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+
+pub struct Scrapper;
+
+lazy_static! {
+    static ref client: Client = Client::new();
+}
 
 #[derive(Serialize)]
 pub struct EmbeddingRequest {
@@ -29,7 +36,6 @@ pub struct EmbeddingResult {
 }
 
 pub struct EmbeddingsGenerator {
-    client: Client,
     model_name: String,
     account_id: String,
     api_token: String,
@@ -37,10 +43,7 @@ pub struct EmbeddingsGenerator {
 
 impl EmbeddingsGenerator {
     pub fn new(model_name: String, account_id: String, api_token: String) -> Self {
-        let client = Client::new();
-
         Self {
-            client,
             model_name,
             account_id,
             api_token,
@@ -89,8 +92,7 @@ impl EmbeddingsGenerator {
 
         let request_body = EmbeddingRequest { text: texts };
 
-        let response = self
-            .client
+        let response = client
             .post(&url)
             .header("Authorization", format!("Bearer {}", self.api_token))
             .json(&request_body)

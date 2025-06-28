@@ -11,6 +11,9 @@ uuid = { version = "1.0", features = ["v4"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
+lazy_static = { workspace = true}
+umem_vector = { workspace = true}
+umem_embeddings = { workspace = true}
 
 [build-dependencies]
 tonic-build = "0.12"
