@@ -1,6 +1,7 @@
 use anyhow::Result;
+pub use qdrant_client::Payload;
 use qdrant_client::{
-    Payload, Qdrant,
+    Qdrant,
     qdrant::{
         Condition, CreateCollectionBuilder, CreateFieldIndexCollectionBuilder, Distance, FieldType,
         Filter, HnswConfigDiffBuilder, KeywordIndexParamsBuilder, PointId, PointStruct,
@@ -13,27 +14,27 @@ use uuid::Uuid;
 
 const GROUP_ID: &str = "group_id";
 
-pub struct MemoryVectorStore {
+pub struct MemoryStore {
     // TODO: Build a connection pool for QdrantClient
     client: Arc<Qdrant>,
     collection_name: String,
 }
 
-impl Clone for QdrantClientWrapper {
-    /// Creates a new `QdrantClientWrapper` instance with cloned client and collection name.
+impl Clone for MemoryStore {
+    /// Creates a new `MemoryStore` instance with cloned client and collection name.
     ///
     /// The cloned wrapper shares the same underlying Qdrant client via reference counting,
     /// while maintaining an independent copy of the collection name.
     fn clone(&self) -> Self {
-        MemoryVectorStore {
+        MemoryStore {
             client: Arc::clone(&self.client),
             collection_name: self.collection_name.clone(),
         }
     }
 }
 
-impl QdrantClientWrapper {
-    /// Asynchronously creates a new `QdrantClientWrapper` for the specified collection.
+impl MemoryStore {
+    /// Asynchronously creates a new `MemoryStore` for the specified collection.
     ///
     /// If the collection does not exist, it is created with a 1024-dimensional vector configuration (cosine distance), HNSW index, 8-bit integer quantization, and a tenant-aware keyword index on the `"group_id"` field.
     ///
@@ -45,12 +46,12 @@ impl QdrantClientWrapper {
     ///
     /// # Returns
     ///
-    /// A `QdrantClientWrapper` instance configured for the specified collection.
+    /// A `MemoryStore` instance configured for the specified collection.
     ///
     /// # Examples
     ///
     /// ```
-    /// let wrapper = QdrantClientWrapper::new("http://localhost:6333", "my-api-key", "my_collection").await?;
+    /// let wrapper = MemoryStore::new("http://localhost:6333", "my-api-key", "my_collection").await?;
     /// ```
     pub async fn new(url: &str, api_key: &str, collection_name: &str) -> Result<Self> {
         let client = Qdrant::from_url(url).api_key(api_key).build()?;
@@ -81,7 +82,7 @@ impl QdrantClientWrapper {
                 .await?;
         }
 
-        Ok(MemoryVectorStore {
+        Ok(MemoryStore {
             client: Arc::new(client),
             collection_name: collection_name.to_string(),
         })
