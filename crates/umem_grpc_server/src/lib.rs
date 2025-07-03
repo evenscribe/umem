@@ -1,35 +1,25 @@
-use chrono::Utc;
-use memory::memory_service_server::{MemoryService, MemoryServiceServer};
-pub use memory::*;
-use serde_json::json;
-use tokio::sync::OnceCell;
-use tonic::{transport::Server, Request, Response, Status};
-use umem_embeddings::EmbeddingsGenerator;
-use umem_vector::{MemoryStore, Payload};
-use uuid::Uuid;
+use anyhow::Result;
+use tonic::transport::Server;
 
-pub mod memory {
+mod generated {
     tonic::include_proto!("memory");
 }
+mod qdrant;
 
-static MEMORY_STORE: OnceCell<MemoryStore> = OnceCell::const_new();
+pub struct MemoryService;
 
-const URL: &str = "http://localhost:6334";
-const KEY: &str = "test";
-const COLLECTION_NAME: &str = "coll";
+impl MemoryService {
+    pub async fn run_server(addr: &str) -> Result<()> {
+        let addr = addr.parse()?;
 
-async fn get_memory_store() -> &'static MemoryStore {
-    MEMORY_STORE
-        .get_or_init(|| async {
-            MemoryStore::new(URL, KEY, COLLECTION_NAME)
-                .await
-                .expect("qdrant client failed to intialize")
-        })
-        .await
-}
+        println!("Memory gRPC Server listening on {}", addr);
 
-#[derive(Debug, Default)]
-pub struct MemoryServiceImpl;
+        Server::builder()
+            .add_service(generated::memory_service_server::MemoryServiceServer::new(
+                qdrant::QdrantServiceImpl,
+            ))
+            .serve(addr)
+            .await?;
 
 #[tonic::async_trait]
 impl MemoryService for MemoryServiceImpl {
@@ -110,17 +100,4 @@ impl MemoryService for MemoryServiceImpl {
     ) -> Result<Response<ListMemoriesResponse>, Status> {
         unimplemented!()
     }
-}
-
-pub async fn run_server(addr: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let addr = addr.parse()?;
-
-    println!("Memory gRPC Server listening on {}", addr);
-
-    Server::builder()
-        .add_service(MemoryServiceServer::new(MemoryServiceImpl))
-        .serve(addr)
-        .await?;
-
-    Ok(())
 }
