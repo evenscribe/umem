@@ -1,6 +1,7 @@
-use crate::{client, Embedder, EmbeddingRequest, EmbeddingResponse};
+use crate::{client, Embedder, EmbeddingRequest};
 use anyhow::Result;
 use async_trait::async_trait;
+use std::collections::HashMap;
 
 const CF_BAAI_BGE_M3_EMBEDER_NAME: &str = "@cf/baai/bge-m3";
 
@@ -11,7 +12,7 @@ pub struct CfBaaiBgeM3Embeder {
 }
 
 impl CfBaaiBgeM3Embeder {
-    fn new(account_id: String, api_token: String) -> Self {
+    pub fn new(account_id: String, api_token: String) -> Self {
         Self {
             model_name: CF_BAAI_BGE_M3_EMBEDER_NAME,
             account_id,
@@ -28,7 +29,7 @@ impl Embedder for CfBaaiBgeM3Embeder {
             self.account_id, self.model_name
         );
 
-        let request_body = EmbeddingRequest { text: vec![text] };
+        let request_body = [("text", vec![text])];
 
         let response = client
             .post(&url)
@@ -37,9 +38,42 @@ impl Embedder for CfBaaiBgeM3Embeder {
             .send()
             .await?;
 
-        let mut embedding_response: EmbeddingResponse = response.json().await?;
+        let embedding_response: HashMap<String, String> = response.json().await?;
 
-        Ok(std::mem::take(&mut embedding_response.result.data[0]))
+        if !embedding_response.contains_key("result") {
+            return Err(anyhow::anyhow!("Invalid response from embedding service"));
+        }
+
+        if !embedding_response
+            .get("success")
+            .unwrap_or(&"false".to_string())
+            .parse::<bool>()?
+        {
+            if let Some(errors) = embedding_response.get("errors") {
+                if !errors.is_empty() {
+                    return Err(anyhow::anyhow!(
+                        "Embedding service returned errors: {:?}",
+                        errors
+                    ));
+                }
+            }
+            return Err(anyhow::anyhow!("Embedding service returned success=false"));
+        }
+
+        let result = embedding_response.get("result").unwrap();
+
+        let result = serde_json::from_str::<HashMap<String, String>>(result)
+            .map_err(|e| anyhow::anyhow!("Failed to parse 'result': {}", e))?;
+
+        if !result.contains_key("data") {
+            return Err(anyhow::anyhow!("Missing 'data' in result"));
+        }
+
+        let mut embedding_response: Vec<Vec<f32>> =
+            serde_json::from_str(result.get("data").unwrap())
+                .map_err(|e| anyhow::anyhow!("Failed to parse 'data': {}", e))?;
+
+        Ok(std::mem::take(&mut embedding_response[0]))
     }
 
     async fn generate_embeddings_bulk(&self, texts: Vec<String>) -> Result<Vec<Vec<f32>>> {
@@ -57,8 +91,41 @@ impl Embedder for CfBaaiBgeM3Embeder {
             .send()
             .await?;
 
-        let embedding_response: EmbeddingResponse = response.json().await?;
+        let embedding_response: HashMap<String, String> = response.json().await?;
 
-        Ok(embedding_response.result.data)
+        if !embedding_response.contains_key("result") {
+            return Err(anyhow::anyhow!("Invalid response from embedding service"));
+        }
+
+        if !embedding_response
+            .get("success")
+            .unwrap_or(&"false".to_string())
+            .parse::<bool>()?
+        {
+            if let Some(errors) = embedding_response.get("errors") {
+                if !errors.is_empty() {
+                    return Err(anyhow::anyhow!(
+                        "Embedding service returned errors: {:?}",
+                        errors
+                    ));
+                }
+            }
+            return Err(anyhow::anyhow!("Embedding service returned success=false"));
+        }
+
+        let result = embedding_response.get("result").unwrap();
+
+        let result = serde_json::from_str::<HashMap<String, String>>(result)
+            .map_err(|e| anyhow::anyhow!("Failed to parse 'result': {}", e))?;
+
+        if !result.contains_key("data") {
+            return Err(anyhow::anyhow!("Missing 'data' in result"));
+        }
+
+        let embedding_response: Vec<Vec<f32>> =
+            serde_json::from_str(result.get("data").unwrap())
+                .map_err(|e| anyhow::anyhow!("Failed to parse 'data': {}", e))?;
+
+        Ok(embedding_response)
     }
 }
