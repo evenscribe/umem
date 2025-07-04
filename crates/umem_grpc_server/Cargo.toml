@@ -16,6 +16,7 @@ umem_vector = { workspace = true}
 umem_embeddings = { workspace = true}
 umem_summarizer = { workspace = true}
 anyhow = { workspace = true}
+futures = "0.3.31"
 
 [build-dependencies]
 tonic-build = "0.12"
