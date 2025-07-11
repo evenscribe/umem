@@ -1,5 +1,4 @@
 use crate::generated;
-use futures::future::join_all;
 use lazy_static::lazy_static;
 use serde_json::json;
 use tokio::sync::OnceCell;
@@ -38,12 +37,12 @@ impl generated::memory_service_server::MemoryService for QdrantServiceImpl {
     async fn add_memory(
         &self,
         request: Request<generated::Memory>,
-    ) -> Result<Response<generated::Memory>, Status> {
+    ) -> Result<Response<()>, Status> {
         let memory_store = get_memory_store().await;
         let request = request.into_inner();
 
         let vectors = CFEmbeder
-            .generate_embedding(request.content.clone())
+            .generate_embedding(request.content.as_str())
             .await
             .map_err(|e| Status::internal(format!("Failed to generate embedding: {}", e)))?;
 
@@ -52,71 +51,143 @@ impl generated::memory_service_server::MemoryService for QdrantServiceImpl {
         })?;
 
         memory_store
-            .insert_embedding(payload, vectors, request.user_id.as_str())
+            .insert_embedding(payload, vectors, request.user_id)
             .await
             .map_err(|e| Status::internal(format!("Failed to upsert memory: {}", e)))?;
 
-        Ok(Response::new(request))
+        Ok(Response::new(()))
     }
 
     async fn add_memory_bulk(
         &self,
         request: Request<generated::MemoryBulk>,
-    ) -> Result<Response<generated::MemoryBulk>, Status> {
+    ) -> Result<Response<()>, Status> {
         let memory_store = get_memory_store().await;
         let request = request.into_inner();
 
-        let vectors: Vec<_> = request
+        if request.memories.is_empty() {
+            return Err(Status::internal("Memories is empty."));
+        }
+
+        let texts = request
             .memories
             .iter()
-            .map(
-                async |memory| match CFEmbeder.generate_embedding(memory.content.clone()).await {
-                    Ok(vectors) => Some(vectors),
-                    Err(e) => None,
-                },
-            )
+            .map(|memory| memory.content.as_str())
             .collect();
 
-        let vectors: Vec<Option<Vec<f32>>> = join_all(vectors).await;
+        let vectors: Vec<Vec<f32>> = CFEmbeder
+            .generate_embeddings_bulk(texts)
+            .await
+            .map_err(|e| Status::internal(format!("Failed to generate embedding: {}", e)))?;
 
-        let payload = Payload::try_from(json!(request)).map_err(|e| {
-            Status::invalid_argument(format!("Failed to convert Memory to Payload: {}", e))
-        })?;
+        let payloads = request
+            .memories
+            .iter()
+            .map(|memory| Payload::try_from(json!(memory)).expect("Couldn't parse payload."))
+            .collect::<Vec<_>>();
 
+        let user_id = &request.memories[0].user_id;
         memory_store
-            .insert_embedding(payload, vectors, request.user_id.as_str())
+            .insert_embeddings_bulk(
+                std::iter::zip(payloads, vectors).collect::<Vec<_>>(),
+                user_id.as_str(),
+            )
             .await
             .map_err(|e| Status::internal(format!("Failed to upsert memory: {}", e)))?;
 
-        Ok(Response::new(request))
+        Ok(Response::new(()))
     }
 
     async fn modify_memory(
         &self,
-        _request: Request<generated::ModifyMemoryParameters>,
-    ) -> Result<Response<generated::Memory>, Status> {
-        todo!()
+        request: Request<generated::ModifyMemoryParameters>,
+    ) -> Result<Response<()>, Status> {
+        let memory_store = get_memory_store().await;
+        let request = request.into_inner();
+
+        let vectors = CFEmbeder
+            .generate_embedding(&request.content.as_str())
+            .await
+            .map_err(|e| Status::internal(format!("Failed to generate embedding: {}", e)))?;
+
+        memory_store
+            .modify_point(
+                &request.memory_id.as_str(),
+                Some(vectors),
+                Some(Payload::try_from(json!(request)).expect("Couldn't parse payload.")),
+            )
+            .await
+            .map_err(|e| Status::internal(format!("Failed to modify_memory : {}", e)))?;
+
+        Ok(Response::new(()))
     }
 
     async fn delete_memory(
         &self,
-        _request: Request<generated::DeleteMemoryParameters>,
+        request: Request<generated::DeleteMemoryParameters>,
     ) -> Result<Response<()>, Status> {
-        todo!()
+        let memory_store = get_memory_store().await;
+        let request = request.into_inner();
+
+        memory_store
+            .delete_point(&request.memory_id)
+            .await
+            .map_err(|e| Status::internal(format!("Failed to delete memory: {}", e)))?;
+
+        Ok(Response::new(()))
     }
 
     /// Qdrant Queries
     async fn get_memory_by_query(
         &self,
-        _request: Request<generated::GetMemoriesByQueryParameters>,
-    ) -> Result<Response<generated::Memory>, Status> {
-        todo!()
+        request: Request<generated::GetMemoriesByQueryParameters>,
+    ) -> Result<Response<generated::MemoryBulk>, Status> {
+        let memory_store = get_memory_store().await;
+        let request = request.into_inner();
+
+        let vector = CFEmbeder
+            .generate_embedding(&request.query)
+            .await
+            .map_err(|e| Status::internal(format!("Failed to generate_embedding : {}", e)))?;
+
+        let search_response = memory_store
+            .search_with_vector(vector, Some(10), &request.user_id)
+            .await
+            .map_err(|e| Status::internal(format!("Failed to search_with_vector : {}", e)))?;
+
+        Ok(Response::new(generated::MemoryBulk {
+            memories: search_response
+                .result
+                .into_iter()
+                .map(|scored_point| {
+                    serde_json::from_value(serde_json::to_value(scored_point.payload).expect(""))
+                        .expect("")
+                })
+                .collect::<Vec<_>>(),
+        }))
     }
 
     async fn get_memory_by_user_id(
         &self,
-        _request: Request<generated::GetMemoriesByUserIdParameters>,
+        request: Request<generated::GetMemoriesByUserIdParameters>,
     ) -> Result<Response<generated::MemoryBulk>, Status> {
-        todo!()
+        let memory_store = get_memory_store().await;
+        let request = request.into_inner();
+
+        let search_response = memory_store
+            .search_with_payload(vec![("user_id".to_string(), request.user_id)], None)
+            .await
+            .map_err(|e| Status::internal(format!("Failed to search_with_vector : {}", e)))?;
+
+        Ok(Response::new(generated::MemoryBulk {
+            memories: search_response
+                .result
+                .into_iter()
+                .map(|scored_point| {
+                    serde_json::from_value(serde_json::to_value(scored_point.payload).expect(""))
+                        .expect("")
+                })
+                .collect::<Vec<_>>(),
+        }))
     }
 }
