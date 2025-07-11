@@ -1,4 +1,4 @@
-use crate::{client, Embedder, EmbeddingRequest};
+use crate::{client, Embedder};
 use anyhow::Result;
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -23,7 +23,7 @@ impl CfBaaiBgeM3Embeder {
 
 #[async_trait]
 impl Embedder for CfBaaiBgeM3Embeder {
-    async fn generate_embedding(&self, text: String) -> Result<Vec<f32>> {
+    async fn generate_embedding<'em>(&self, text: &'em str) -> Result<Vec<f32>> {
         let url = format!(
             "https://api.cloudflare.com/client/v4/accounts/{}/ai/run/{}",
             self.account_id, self.model_name
@@ -39,10 +39,6 @@ impl Embedder for CfBaaiBgeM3Embeder {
             .await?;
 
         let embedding_response: HashMap<String, String> = response.json().await?;
-
-        if !embedding_response.contains_key("result") {
-            return Err(anyhow::anyhow!("Invalid response from embedding service"));
-        }
 
         if !embedding_response
             .get("success")
@@ -76,13 +72,13 @@ impl Embedder for CfBaaiBgeM3Embeder {
         Ok(std::mem::take(&mut embedding_response[0]))
     }
 
-    async fn generate_embeddings_bulk(&self, texts: Vec<String>) -> Result<Vec<Vec<f32>>> {
+    async fn generate_embeddings_bulk<'em>(&self, texts: Vec<&'em str>) -> Result<Vec<Vec<f32>>> {
         let url = format!(
             "https://api.cloudflare.com/client/v4/accounts/{}/ai/run/{}",
             self.account_id, self.model_name
         );
 
-        let request_body = EmbeddingRequest { text: texts };
+        let request_body = [("text", texts)];
 
         let response = client
             .post(&url)
@@ -92,10 +88,6 @@ impl Embedder for CfBaaiBgeM3Embeder {
             .await?;
 
         let embedding_response: HashMap<String, String> = response.json().await?;
-
-        if !embedding_response.contains_key("result") {
-            return Err(anyhow::anyhow!("Invalid response from embedding service"));
-        }
 
         if !embedding_response
             .get("success")
