@@ -6,13 +6,13 @@ package memory;
 
 service MemoryService {
   // Qdrant Mutations
-  rpc AddMemory(Memory) returns (Memory);
-  rpc AddMemoryBulk(MemoryBulk) returns (MemoryBulk);
-  rpc ModifyMemory(ModifyMemoryParameters) returns (Memory);
+  rpc AddMemory(Memory) returns (google.protobuf.Empty);
+  rpc AddMemoryBulk(MemoryBulk) returns (google.protobuf.Empty);
+  rpc ModifyMemory(ModifyMemoryParameters) returns (google.protobuf.Empty);
   rpc DeleteMemory(DeleteMemoryParameters) returns (google.protobuf.Empty);
 
   // Qdrant Queries
-  rpc GetMemoryByQuery(GetMemoriesByQueryParameters) returns (Memory);
+  rpc GetMemoryByQuery(GetMemoriesByQueryParameters) returns (MemoryBulk);
   rpc GetMemoryByUserID(GetMemoriesByUserIDParameters) returns (MemoryBulk);
 }
 
