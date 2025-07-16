@@ -31,3 +31,4 @@ tokio = { workspace = true, features = ["rt-multi-thread"] }
 serde_json = { workspace = true }
 reqwest = { workspace = true, features = ["json"] }
 serde = { workspace = true, features = ["derive"] }
+dotenv = "0.15.0"

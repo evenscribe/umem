@@ -1,7 +1,24 @@
 use crate::{client, Embedder};
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
-use std::collections::HashMap;
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize)]
+struct EmbeddingRequest<'em> {
+    text: Vec<&'em str>,
+}
+
+#[derive(Deserialize, Debug)]
+struct EmbeddingResponse {
+    result: EmbeddingResult,
+    errors: Vec<String>,
+    success: bool,
+}
+
+#[derive(Deserialize, Debug)]
+struct EmbeddingResult {
+    data: Vec<Vec<f32>>,
+}
 
 const CF_BAAI_BGE_M3_EMBEDER_NAME: &str = "@cf/baai/bge-m3";
 
@@ -28,48 +45,18 @@ impl Embedder for CfBaaiBgeM3Embeder {
             "https://api.cloudflare.com/client/v4/accounts/{}/ai/run/{}",
             self.account_id, self.model_name
         );
-
-        let request_body = [("text", vec![text])];
-
+        let request_body = EmbeddingRequest { text: vec![text] };
         let response = client
             .post(&url)
             .header("Authorization", format!("Bearer {}", self.api_token))
             .json(&request_body)
             .send()
             .await?;
-
-        let embedding_response: HashMap<String, String> = response.json().await?;
-
-        if !embedding_response
-            .get("success")
-            .unwrap_or(&"false".to_string())
-            .parse::<bool>()?
-        {
-            if let Some(errors) = embedding_response.get("errors") {
-                if !errors.is_empty() {
-                    return Err(anyhow::anyhow!(
-                        "Embedding service returned errors: {:?}",
-                        errors
-                    ));
-                }
-            }
-            return Err(anyhow::anyhow!("Embedding service returned success=false"));
+        let mut embedding_response: EmbeddingResponse = response.json().await?;
+        if !embedding_response.success {
+            bail!("{:?}", embedding_response.errors);
         }
-
-        let result = embedding_response.get("result").unwrap();
-
-        let result = serde_json::from_str::<HashMap<String, String>>(result)
-            .map_err(|e| anyhow::anyhow!("Failed to parse 'result': {}", e))?;
-
-        if !result.contains_key("data") {
-            return Err(anyhow::anyhow!("Missing 'data' in result"));
-        }
-
-        let mut embedding_response: Vec<Vec<f32>> =
-            serde_json::from_str(result.get("data").unwrap())
-                .map_err(|e| anyhow::anyhow!("Failed to parse 'data': {}", e))?;
-
-        Ok(std::mem::take(&mut embedding_response[0]))
+        Ok(std::mem::take(&mut embedding_response.result.data[0]))
     }
 
     async fn generate_embeddings_bulk<'em>(&self, texts: Vec<&'em str>) -> Result<Vec<Vec<f32>>> {
@@ -77,47 +64,17 @@ impl Embedder for CfBaaiBgeM3Embeder {
             "https://api.cloudflare.com/client/v4/accounts/{}/ai/run/{}",
             self.account_id, self.model_name
         );
-
-        let request_body = [("text", texts)];
-
+        let request_body = EmbeddingRequest { text: texts };
         let response = client
             .post(&url)
             .header("Authorization", format!("Bearer {}", self.api_token))
             .json(&request_body)
             .send()
             .await?;
-
-        let embedding_response: HashMap<String, String> = response.json().await?;
-
-        if !embedding_response
-            .get("success")
-            .unwrap_or(&"false".to_string())
-            .parse::<bool>()?
-        {
-            if let Some(errors) = embedding_response.get("errors") {
-                if !errors.is_empty() {
-                    return Err(anyhow::anyhow!(
-                        "Embedding service returned errors: {:?}",
-                        errors
-                    ));
-                }
-            }
-            return Err(anyhow::anyhow!("Embedding service returned success=false"));
+        let embedding_response: EmbeddingResponse = response.json().await?;
+        if !embedding_response.success {
+            bail!("{:?}", embedding_response.errors);
         }
-
-        let result = embedding_response.get("result").unwrap();
-
-        let result = serde_json::from_str::<HashMap<String, String>>(result)
-            .map_err(|e| anyhow::anyhow!("Failed to parse 'result': {}", e))?;
-
-        if !result.contains_key("data") {
-            return Err(anyhow::anyhow!("Missing 'data' in result"));
-        }
-
-        let embedding_response: Vec<Vec<f32>> =
-            serde_json::from_str(result.get("data").unwrap())
-                .map_err(|e| anyhow::anyhow!("Failed to parse 'data': {}", e))?;
-
-        Ok(embedding_response)
+        Ok(embedding_response.result.data)
     }
 }
