@@ -8,28 +8,28 @@ pub struct Memory {
     pub memory_id: ::prost::alloc::string::String,
     #[prost(string, tag = "3")]
     pub content: ::prost::alloc::string::String,
-    #[prost(string, tag = "4")]
-    pub priority: ::prost::alloc::string::String,
+    #[prost(int32, tag = "4")]
+    pub priority: i32,
     #[prost(string, repeated, tag = "5")]
     pub tags: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-    #[prost(string, tag = "6")]
-    pub created_at: ::prost::alloc::string::String,
-    #[prost(string, tag = "7")]
-    pub updated_at: ::prost::alloc::string::String,
+    #[prost(int64, tag = "6")]
+    pub created_at: i64,
+    #[prost(int64, tag = "7")]
+    pub updated_at: i64,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MemoryBulk {
     #[prost(message, repeated, tag = "1")]
     pub memories: ::prost::alloc::vec::Vec<Memory>,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ModifyMemoryParameters {
+#[derive(serde::Serialize, serde::Deserialize, Clone, PartialEq, ::prost::Message)]
+pub struct UpdateMemoryParameters {
     #[prost(string, tag = "1")]
     pub memory_id: ::prost::alloc::string::String,
     #[prost(string, tag = "2")]
     pub content: ::prost::alloc::string::String,
-    #[prost(string, tag = "3")]
-    pub priority: ::prost::alloc::string::String,
+    #[prost(int32, tag = "3")]
+    pub priority: i32,
     #[prost(string, repeated, tag = "4")]
     pub tags: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
@@ -72,20 +72,20 @@ pub mod memory_service_server {
             &self,
             request: tonic::Request<super::MemoryBulk>,
         ) -> std::result::Result<tonic::Response<()>, tonic::Status>;
-        async fn modify_memory(
+        async fn update_memory(
             &self,
-            request: tonic::Request<super::ModifyMemoryParameters>,
+            request: tonic::Request<super::UpdateMemoryParameters>,
         ) -> std::result::Result<tonic::Response<()>, tonic::Status>;
         async fn delete_memory(
             &self,
             request: tonic::Request<super::DeleteMemoryParameters>,
         ) -> std::result::Result<tonic::Response<()>, tonic::Status>;
         /// Qdrant Queries
-        async fn get_memory_by_query(
+        async fn get_memories_by_query(
             &self,
             request: tonic::Request<super::GetMemoriesByQueryParameters>,
-        ) -> std::result::Result<tonic::Response<super::Memory>, tonic::Status>;
-        async fn get_memory_by_user_id(
+        ) -> std::result::Result<tonic::Response<super::MemoryBulk>, tonic::Status>;
+        async fn get_memories_by_user_id(
             &self,
             request: tonic::Request<super::GetMemoriesByUserIdParameters>,
         ) -> std::result::Result<tonic::Response<super::MemoryBulk>, tonic::Status>;
@@ -238,22 +238,22 @@ pub mod memory_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/memory.MemoryService/ModifyMemory" => {
+                "/memory.MemoryService/UpdateMemory" => {
                     #[allow(non_camel_case_types)]
-                    struct ModifyMemorySvc<T: MemoryService>(pub Arc<T>);
+                    struct UpdateMemorySvc<T: MemoryService>(pub Arc<T>);
                     impl<T: MemoryService>
-                        tonic::server::UnaryService<super::ModifyMemoryParameters>
-                        for ModifyMemorySvc<T>
+                        tonic::server::UnaryService<super::UpdateMemoryParameters>
+                        for UpdateMemorySvc<T>
                     {
                         type Response = ();
                         type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::ModifyMemoryParameters>,
+                            request: tonic::Request<super::UpdateMemoryParameters>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as MemoryService>::modify_memory(&inner, request).await
+                                <T as MemoryService>::update_memory(&inner, request).await
                             };
                             Box::pin(fut)
                         }
@@ -264,7 +264,7 @@ pub mod memory_service_server {
                     let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
-                        let method = ModifyMemorySvc(inner);
+                        let method = UpdateMemorySvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
@@ -322,14 +322,14 @@ pub mod memory_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/memory.MemoryService/GetMemoryByQuery" => {
+                "/memory.MemoryService/GetMemoriesByQuery" => {
                     #[allow(non_camel_case_types)]
-                    struct GetMemoryByQuerySvc<T: MemoryService>(pub Arc<T>);
+                    struct GetMemoriesByQuerySvc<T: MemoryService>(pub Arc<T>);
                     impl<T: MemoryService>
                         tonic::server::UnaryService<super::GetMemoriesByQueryParameters>
-                        for GetMemoryByQuerySvc<T>
+                        for GetMemoriesByQuerySvc<T>
                     {
-                        type Response = super::Memory;
+                        type Response = super::MemoryBulk;
                         type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
                         fn call(
                             &mut self,
@@ -337,7 +337,7 @@ pub mod memory_service_server {
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as MemoryService>::get_memory_by_query(&inner, request).await
+                                <T as MemoryService>::get_memories_by_query(&inner, request).await
                             };
                             Box::pin(fut)
                         }
@@ -348,7 +348,7 @@ pub mod memory_service_server {
                     let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
-                        let method = GetMemoryByQuerySvc(inner);
+                        let method = GetMemoriesByQuerySvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
@@ -364,12 +364,12 @@ pub mod memory_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/memory.MemoryService/GetMemoryByUserID" => {
+                "/memory.MemoryService/GetMemoriesByUserID" => {
                     #[allow(non_camel_case_types)]
-                    struct GetMemoryByUserIDSvc<T: MemoryService>(pub Arc<T>);
+                    struct GetMemoriesByUserIDSvc<T: MemoryService>(pub Arc<T>);
                     impl<T: MemoryService>
                         tonic::server::UnaryService<super::GetMemoriesByUserIdParameters>
-                        for GetMemoryByUserIDSvc<T>
+                        for GetMemoriesByUserIDSvc<T>
                     {
                         type Response = super::MemoryBulk;
                         type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
@@ -379,7 +379,7 @@ pub mod memory_service_server {
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as MemoryService>::get_memory_by_user_id(&inner, request).await
+                                <T as MemoryService>::get_memories_by_user_id(&inner, request).await
                             };
                             Box::pin(fut)
                         }
@@ -390,7 +390,7 @@ pub mod memory_service_server {
                     let max_encoding_message_size = self.max_encoding_message_size;
                     let inner = self.inner.clone();
                     let fut = async move {
-                        let method = GetMemoryByUserIDSvc(inner);
+                        let method = GetMemoriesByUserIDSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

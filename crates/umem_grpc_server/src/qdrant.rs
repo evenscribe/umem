@@ -4,19 +4,20 @@ use serde_json::json;
 use tokio::sync::OnceCell;
 use tonic::{Request, Response, Status};
 use umem_embeddings::Embedder;
-use umem_vector::{MemoryStore, Payload};
+use umem_vector::QdrantVectorStore;
 
-const URL: &str = "http://localhost:6334";
-const KEY: &str = "test";
-const COLLECTION_NAME: &str = "horses";
+static MEMORY_STORE: OnceCell<QdrantVectorStore> = OnceCell::const_new();
 
-static MEMORY_STORE: OnceCell<MemoryStore> = OnceCell::const_new();
-async fn get_memory_store() -> &'static MemoryStore {
+async fn get_memory_store() -> &'static QdrantVectorStore {
     MEMORY_STORE
         .get_or_init(|| async {
-            MemoryStore::new(URL, KEY, COLLECTION_NAME)
-                .await
-                .expect("qdrant client failed to intialize")
+            QdrantVectorStore::new(
+                &std::env::var("QDRANT_URL").expect("QDRANT_URL not set"),
+                &std::env::var("QDRANT_KEY").expect("QDRANT_KEY not set"),
+                &std::env::var("QDRANT_COLLECTION_NAME").expect("QDRANT_COLLECTION_NAME not set"),
+            )
+            .await
+            .expect("qdrant client failed to intialize")
         })
         .await
 }
@@ -40,21 +41,14 @@ impl generated::memory_service_server::MemoryService for QdrantServiceImpl {
     ) -> Result<Response<()>, Status> {
         let memory_store = get_memory_store().await;
         let request = request.into_inner();
-
         let vectors = CFEmbeder
             .generate_embedding(request.content.as_str())
             .await
             .map_err(|e| Status::internal(format!("Failed to generate embedding: {}", e)))?;
-
-        let payload = Payload::try_from(json!(request)).map_err(|e| {
-            Status::invalid_argument(format!("Failed to convert Memory to Payload: {}", e))
-        })?;
-
         memory_store
-            .insert_embedding(payload, vectors)
+            .insert_embedding(request, vectors)
             .await
             .map_err(|e| Status::internal(format!("Failed to upsert memory: {}", e)))?;
-
         Ok(Response::new(()))
     }
 
@@ -80,23 +74,17 @@ impl generated::memory_service_server::MemoryService for QdrantServiceImpl {
             .await
             .map_err(|e| Status::internal(format!("Failed to generate embedding: {}", e)))?;
 
-        let payloads = request
-            .memories
-            .iter()
-            .map(|memory| Payload::try_from(json!(memory)).expect("Couldn't parse payload."))
-            .collect::<Vec<_>>();
-
         memory_store
-            .insert_embeddings_bulk(std::iter::zip(payloads, vectors).collect::<Vec<_>>())
+            .insert_embeddings_bulk(std::iter::zip(request.memories, vectors).collect::<Vec<_>>())
             .await
             .map_err(|e| Status::internal(format!("Failed to upsert memory: {}", e)))?;
 
         Ok(Response::new(()))
     }
 
-    async fn modify_memory(
+    async fn update_memory(
         &self,
-        request: Request<generated::ModifyMemoryParameters>,
+        request: Request<generated::UpdateMemoryParameters>,
     ) -> Result<Response<()>, Status> {
         let memory_store = get_memory_store().await;
         let request = request.into_inner();
@@ -107,11 +95,7 @@ impl generated::memory_service_server::MemoryService for QdrantServiceImpl {
             .map_err(|e| Status::internal(format!("Failed to generate embedding: {}", e)))?;
 
         memory_store
-            .modify_point(
-                &request.memory_id.as_str(),
-                Some(vectors),
-                Some(Payload::try_from(json!(request)).expect("Couldn't parse payload.")),
-            )
+            .update_point(&request.memory_id.clone(), Some(vectors), Some(request))
             .await
             .map_err(|e| Status::internal(format!("Failed to modify_memory : {}", e)))?;
 
@@ -134,7 +118,7 @@ impl generated::memory_service_server::MemoryService for QdrantServiceImpl {
     }
 
     /// Qdrant Queries
-    async fn get_memory_by_query(
+    async fn get_memories_by_query(
         &self,
         request: Request<generated::GetMemoriesByQueryParameters>,
     ) -> Result<Response<generated::MemoryBulk>, Status> {
@@ -156,14 +140,14 @@ impl generated::memory_service_server::MemoryService for QdrantServiceImpl {
                 .result
                 .into_iter()
                 .map(|scored_point| {
-                    serde_json::from_value(serde_json::to_value(scored_point.payload).expect(""))
-                        .expect("")
+                    serde_json::from_value(json!(scored_point.payload))
+                        .expect("Payload to Memory parse failed.")
                 })
                 .collect::<Vec<_>>(),
         }))
     }
 
-    async fn get_memory_by_user_id(
+    async fn get_memories_by_user_id(
         &self,
         request: Request<generated::GetMemoriesByUserIdParameters>,
     ) -> Result<Response<generated::MemoryBulk>, Status> {
@@ -180,8 +164,8 @@ impl generated::memory_service_server::MemoryService for QdrantServiceImpl {
                 .result
                 .into_iter()
                 .map(|scored_point| {
-                    serde_json::from_value(serde_json::to_value(scored_point.payload).expect(""))
-                        .expect("")
+                    serde_json::from_value(json!(scored_point.payload))
+                        .expect("Payload to Memory parse failed.")
                 })
                 .collect::<Vec<_>>(),
         }))
