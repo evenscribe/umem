@@ -13,7 +13,6 @@ use qdrant_client::{
 };
 use std::sync::Arc;
 use uuid::Uuid;
-const GROUP_ID: &str = "group_id";
 
 pub struct MemoryStore {
     client: Arc<Qdrant>,
@@ -51,7 +50,7 @@ impl MemoryStore {
                 .create_field_index(
                     CreateFieldIndexCollectionBuilder::new(
                         collection_name,
-                        GROUP_ID,
+                        "user_id",
                         FieldType::Keyword,
                     )
                     .field_index_params(KeywordIndexParamsBuilder::default().is_tenant(true)),
@@ -65,14 +64,7 @@ impl MemoryStore {
         })
     }
 
-    pub async fn insert_embedding(
-        &self,
-        mut payload: Payload,
-        vectors: Vec<f32>,
-        user_id: String,
-    ) -> Result<()> {
-        payload.insert(GROUP_ID.to_string(), user_id);
-
+    pub async fn insert_embedding(&self, payload: Payload, vectors: Vec<f32>) -> Result<()> {
         self.client
             .upsert_points(UpsertPointsBuilder::new(
                 self.collection_name.as_str(),
@@ -87,18 +79,13 @@ impl MemoryStore {
         Ok(())
     }
 
-    pub async fn insert_embeddings_bulk(
-        &self,
-        points: Vec<(Payload, Vec<f32>)>,
-        user_id: &str,
-    ) -> Result<()> {
+    pub async fn insert_embeddings_bulk(&self, points: Vec<(Payload, Vec<f32>)>) -> Result<()> {
         self.client
             .upsert_points(UpsertPointsBuilder::new(
                 self.collection_name.as_str(),
                 points
                     .into_iter()
-                    .map(|(mut payload, vectors)| {
-                        payload.insert(GROUP_ID.to_string(), user_id);
+                    .map(|(payload, vectors)| {
                         PointStruct::new(
                             PointId::from(Uuid::new_v4().to_string()),
                             vectors,
@@ -124,7 +111,7 @@ impl MemoryStore {
                 SearchPointsBuilder::new(self.collection_name.as_str(), vector, limit)
                     .with_payload(true)
                     .filter(Filter::must([Condition::matches(
-                        GROUP_ID,
+                        "user_id",
                         user_id.to_string(),
                     )])),
             )

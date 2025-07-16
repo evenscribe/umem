@@ -6,9 +6,9 @@ use tonic::{Request, Response, Status};
 use umem_embeddings::Embedder;
 use umem_vector::{MemoryStore, Payload};
 
-const URL: &str = "";
-const KEY: &str = "";
-const COLLECTION_NAME: &str = "";
+const URL: &str = "http://localhost:6334";
+const KEY: &str = "test";
+const COLLECTION_NAME: &str = "horses";
 
 static MEMORY_STORE: OnceCell<MemoryStore> = OnceCell::const_new();
 async fn get_memory_store() -> &'static MemoryStore {
@@ -51,7 +51,7 @@ impl generated::memory_service_server::MemoryService for QdrantServiceImpl {
         })?;
 
         memory_store
-            .insert_embedding(payload, vectors, request.user_id)
+            .insert_embedding(payload, vectors)
             .await
             .map_err(|e| Status::internal(format!("Failed to upsert memory: {}", e)))?;
 
@@ -86,12 +86,8 @@ impl generated::memory_service_server::MemoryService for QdrantServiceImpl {
             .map(|memory| Payload::try_from(json!(memory)).expect("Couldn't parse payload."))
             .collect::<Vec<_>>();
 
-        let user_id = &request.memories[0].user_id;
         memory_store
-            .insert_embeddings_bulk(
-                std::iter::zip(payloads, vectors).collect::<Vec<_>>(),
-                user_id.as_str(),
-            )
+            .insert_embeddings_bulk(std::iter::zip(payloads, vectors).collect::<Vec<_>>())
             .await
             .map_err(|e| Status::internal(format!("Failed to upsert memory: {}", e)))?;
 
