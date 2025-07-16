@@ -3349,7 +3349,9 @@ name = "umem_vector"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "qdrant-client",
+ "serde",
  "serde_json",
  "tokio",
  "tonic 0.13.1",

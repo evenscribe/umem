@@ -3,23 +3,6 @@ use anyhow::{bail, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize)]
-struct EmbeddingRequest<'em> {
-    text: Vec<&'em str>,
-}
-
-#[derive(Deserialize, Debug)]
-struct EmbeddingResponse {
-    result: EmbeddingResult,
-    errors: Vec<String>,
-    success: bool,
-}
-
-#[derive(Deserialize, Debug)]
-struct EmbeddingResult {
-    data: Vec<Vec<f32>>,
-}
-
 const CF_BAAI_BGE_M3_EMBEDER_NAME: &str = "@cf/baai/bge-m3";
 
 pub struct CfBaaiBgeM3Embeder {
@@ -77,4 +60,21 @@ impl Embedder for CfBaaiBgeM3Embeder {
         }
         Ok(embedding_response.result.data)
     }
+}
+
+#[derive(Serialize)]
+struct EmbeddingRequest<'em> {
+    text: Vec<&'em str>,
+}
+
+#[derive(Deserialize)]
+struct EmbeddingResponse {
+    result: EmbeddingResult,
+    errors: Vec<String>,
+    success: bool,
+}
+
+#[derive(Deserialize)]
+struct EmbeddingResult {
+    data: Vec<Vec<f32>>,
 }
