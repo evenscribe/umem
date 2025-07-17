@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package memory;
+
+service MemoryService {
+  // Qdrant Mutations
+  rpc AddMemory(Memory) returns (google.protobuf.Empty);
+  rpc AddMemoryBulk(MemoryBulk) returns (google.protobuf.Empty);
+  rpc UpdateMemory(UpdateMemoryParameters) returns (google.protobuf.Empty);
+  rpc DeleteMemory(DeleteMemoryParameters) returns (google.protobuf.Empty);
+
+  // Qdrant Queries
+  rpc GetMemoriesByQuery(GetMemoriesByQueryParameters) returns (MemoryBulk);
+  rpc GetMemoriesByUserID(GetMemoriesByUserIDParameters) returns (MemoryBulk);
+}
+
+message Memory {
+  string user_id = 1; // tenant
+  string memory_id = 2;
+  string content = 3;
+  int32 priority = 4;
+  repeated string tags = 5;
+  int64 created_at = 6;
+  int64 updated_at = 7;
+}
+
+message MemoryBulk { repeated Memory memories = 1; }
+
+message UpdateMemoryParameters {
+  string memory_id = 1;
+  string content = 2;
+  int32 priority = 3;
+  repeated string tags = 4;
+}
+
+message DeleteMemoryParameters { string memory_id = 1; }
+
+message GetMemoriesByQueryParameters {
+  string user_id = 1;
+  string query = 2;
+}
+
+message GetMemoriesByUserIDParameters { string user_id = 1; }
