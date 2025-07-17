@@ -4,3 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow = {workspace = true}
+rmcp = {workspace = true }
+umem_proto_generated = { workspace = true }
+umem_controller = { workspace = true }
+serde = {workspace = true }
+schemars = {workspace = true}
