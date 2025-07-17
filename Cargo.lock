@@ -358,7 +358,6 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
- "serde",
  "wasm-bindgen",
  "windows-link",
 ]
@@ -622,6 +621,12 @@ checksum = "95249b50c6c185bee49034bcb378a49dc2b5dff0be90ff6616d31d64febab05d"
 dependencies = [
  "litrs",
 ]
+
+[[package]]
+name = "dotenv"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
 name = "downcast-rs"
@@ -3258,13 +3263,29 @@ name = "umem"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "dotenv",
  "reqwest",
  "serde",
  "serde_json",
  "tokio",
+ "umem_controller",
  "umem_grpc_server",
+ "umem_proto_generated",
  "umem_search",
  "umem_summarizer",
+]
+
+[[package]]
+name = "umem_controller"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lazy_static",
+ "serde_json",
+ "tokio",
+ "umem_embeddings",
+ "umem_proto_generated",
+ "umem_vector",
 ]
 
 [[package]]
@@ -3285,6 +3306,8 @@ name = "umem_embeddings"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
+ "lazy_static",
  "reqwest",
  "serde",
  "serde_json",
@@ -3295,14 +3318,20 @@ dependencies = [
 name = "umem_grpc_server"
 version = "0.1.0"
 dependencies = [
- "chrono",
+ "anyhow",
+ "tonic 0.12.3",
+ "umem_controller",
+ "umem_proto_generated",
+]
+
+[[package]]
+name = "umem_proto_generated"
+version = "0.1.0"
+dependencies = [
  "prost",
  "serde",
- "serde_json",
- "tokio",
  "tonic 0.12.3",
  "tonic-build",
- "uuid",
 ]
 
 [[package]]
@@ -3334,7 +3363,9 @@ name = "umem_vector"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "qdrant-client",
+ "serde",
  "serde_json",
  "tokio",
  "tonic 0.13.1",
