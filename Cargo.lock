@@ -358,7 +358,6 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
- "serde",
  "wasm-bindgen",
  "windows-link",
 ]
@@ -3269,9 +3268,24 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "umem_controller",
  "umem_grpc_server",
+ "umem_proto_generated",
  "umem_search",
  "umem_summarizer",
+]
+
+[[package]]
+name = "umem_controller"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lazy_static",
+ "serde_json",
+ "tokio",
+ "umem_embeddings",
+ "umem_proto_generated",
+ "umem_vector",
 ]
 
 [[package]]
@@ -3305,19 +3319,19 @@ name = "umem_grpc_server"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "chrono",
- "futures",
- "lazy_static",
+ "tonic 0.12.3",
+ "umem_controller",
+ "umem_proto_generated",
+]
+
+[[package]]
+name = "umem_proto_generated"
+version = "0.1.0"
+dependencies = [
  "prost",
  "serde",
- "serde_json",
- "tokio",
  "tonic 0.12.3",
  "tonic-build",
- "umem_embeddings",
- "umem_summarizer",
- "umem_vector",
- "uuid",
 ]
 
 [[package]]

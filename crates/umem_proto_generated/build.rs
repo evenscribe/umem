@@ -3,7 +3,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build_server(true)
         .build_client(false)
         .type_attribute("Memory", "#[derive(serde::Serialize, serde::Deserialize)]")
-        // .out_dir("src")
         .type_attribute(
             "UpdateMemoryParameters",
             "#[derive(serde::Serialize, serde::Deserialize)]",

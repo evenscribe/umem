@@ -1,11 +1,8 @@
 use anyhow::Result;
 use tonic::transport::Server;
+use umem_proto_generated::generated;
 
 mod qdrant;
-
-pub(crate) mod generated {
-    tonic::include_proto!("memory");
-}
 
 pub struct MemoryServiceGrpc;
 
