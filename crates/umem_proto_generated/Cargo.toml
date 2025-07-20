@@ -7,9 +7,9 @@ edition = "2021"
 tonic = "0.12"
 prost = "0.13"
 serde = { workspace = true }
-rmcp = {workspace = true }
-schemars = {workspace = true}
+tokio = { workspace = true }
+rmcp = { workspace = true }
 
 [build-dependencies]
-tonic-build = {version="0.12", features = ["prost"]}
-
+tonic-build = { version="0.12" }
+rmcp = { workspace = true }

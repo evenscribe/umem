@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
 use umem_controller::MemoryController;
-use umem_proto_generated::{generated, MemoryBulk};
+use umem_proto_generated::generated;
 
 #[derive(Debug, Default)]
 pub struct QdrantServiceImpl;
@@ -73,7 +73,7 @@ impl generated::memory_service_server::MemoryService for QdrantServiceImpl {
     ) -> Result<Response<generated::MemoryBulk>, Status> {
         let get_memories_by_query_parameters = request.into_inner();
 
-        let MemoryBulk { memories } =
+        let generated::MemoryBulk { memories } =
             MemoryController::get_memories_by_query(get_memories_by_query_parameters)
                 .await
                 .map_err(|e| Status::internal(format!("Failed to get memories by query: {}", e)))?;
@@ -87,7 +87,7 @@ impl generated::memory_service_server::MemoryService for QdrantServiceImpl {
     ) -> Result<Response<generated::MemoryBulk>, Status> {
         let get_memories_by_user_id = request.into_inner();
 
-        let MemoryBulk { memories } =
+        let generated::MemoryBulk { memories } =
             MemoryController::get_memories_by_user_id(get_memories_by_user_id)
                 .await
                 .map_err(|e| {

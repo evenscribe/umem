@@ -40,12 +40,12 @@ impl McpService {
         if memory.content.is_empty() {
             return Err(McpError::new(
                 ErrorCode::INVALID_REQUEST,
-                "Memory content cannot be empty".into(),
+                "Memory content cannot be empty",
                 None,
             ));
         }
-        MemoryController::add_memory(memory);
-        Ok(CallToolResult::success("Memory added successfully".into()))
+        let _ = MemoryController::add_memory(memory).await;
+        Ok(CallToolResult::success(vec![]))
     }
 }
 
