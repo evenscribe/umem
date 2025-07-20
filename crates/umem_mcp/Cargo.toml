@@ -1,0 +1,14 @@
+[package]
+name = "umem_mcp"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = {workspace = true}
+umem_proto_generated = { workspace = true }
+umem_controller = { workspace = true }
+serde = {workspace = true }
+tonic = "0.12"
+prost = "0.13"
+tokio = { workspace = true }
+rmcp = {workspace = true }
