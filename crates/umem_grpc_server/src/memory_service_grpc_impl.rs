@@ -3,10 +3,10 @@ use umem_controller::MemoryController;
 use umem_proto_generated::generated;
 
 #[derive(Debug, Default)]
-pub struct QdrantServiceImpl;
+pub struct MemoryServiceGrpcImpl;
 
 #[tonic::async_trait]
-impl generated::memory_service_server::MemoryService for QdrantServiceImpl {
+impl generated::memory_service_server::MemoryService for MemoryServiceGrpcImpl {
     async fn add_memory(
         &self,
         request: Request<generated::Memory>,

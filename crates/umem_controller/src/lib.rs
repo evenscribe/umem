@@ -2,9 +2,10 @@ use anyhow::Result;
 use lazy_static::lazy_static;
 use serde_json::json;
 use tokio::sync::OnceCell;
+use umem_db::QdrantVectorStore;
 use umem_embeddings::Embedder;
 use umem_proto_generated::generated;
-use umem_vector::QdrantVectorStore;
+use uuid::Uuid;
 
 static MEMORY_STORE: OnceCell<QdrantVectorStore> = OnceCell::const_new();
 
@@ -35,51 +36,65 @@ pub struct MemoryController;
 
 impl MemoryController {
     pub async fn add_memory(memory: generated::Memory) -> Result<()> {
-        let memory_store = get_memory_store().await;
-        let vectors = CFEmbeder
-            .generate_embedding(memory.content.as_str())
-            .await?;
-        memory_store.insert_embedding(memory, vectors).await?;
+        let mut memory = memory;
+        memory.memory_id = Uuid::new_v4().to_string();
+
+        tokio::spawn(async move {
+            let now = chrono::prelude::Utc::now().timestamp();
+            memory.created_at = now;
+            memory.updated_at = now;
+
+            let memory_store = get_memory_store().await;
+            let vectors = CFEmbeder
+                .generate_embedding(memory.content.as_str())
+                .await
+                .expect("better errors later");
+            memory_store
+                .insert_embedding(memory, vectors)
+                .await
+                .expect("this operation failed");
+        });
         Ok(())
     }
 
     pub async fn add_memory_bulk(memory_bulk: generated::MemoryBulk) -> Result<()> {
-        let memory_store = get_memory_store().await;
-
-        let texts = memory_bulk
-            .memories
-            .iter()
-            .map(|memory| memory.content.as_str())
-            .collect();
-
-        let vectors: Vec<Vec<f32>> = CFEmbeder.generate_embeddings_bulk(texts).await?;
-
-        memory_store
-            .insert_embeddings_bulk(
-                std::iter::zip(memory_bulk.memories, vectors).collect::<Vec<_>>(),
-            )
-            .await?;
-
+        tokio::spawn(async move {
+            let memory_store = get_memory_store().await;
+            let texts = memory_bulk
+                .memories
+                .iter()
+                .map(|memory| memory.content.as_str())
+                .collect();
+            let vectors: Vec<Vec<f32>> = CFEmbeder
+                .generate_embeddings_bulk(texts)
+                .await
+                .expect("better errors later");
+            let _ = memory_store
+                .insert_embeddings_bulk(
+                    std::iter::zip(memory_bulk.memories, vectors).collect::<Vec<_>>(),
+                )
+                .await;
+        });
         Ok(())
     }
 
     pub async fn update_memory(
         update_memory_parameters: generated::UpdateMemoryParameters,
     ) -> Result<()> {
-        let memory_store = get_memory_store().await;
-
-        let vectors = CFEmbeder
-            .generate_embedding(update_memory_parameters.content.as_str())
-            .await?;
-
-        memory_store
-            .update_point(
-                &update_memory_parameters.memory_id.clone(),
-                Some(vectors),
-                Some(update_memory_parameters),
-            )
-            .await?;
-
+        tokio::spawn(async move {
+            let memory_store = get_memory_store().await;
+            let vectors = CFEmbeder
+                .generate_embedding(update_memory_parameters.content.as_str())
+                .await
+                .expect("better errors later");
+            let _ = memory_store
+                .update_point(
+                    &update_memory_parameters.memory_id.clone(),
+                    Some(vectors),
+                    Some(update_memory_parameters),
+                )
+                .await;
+        });
         Ok(())
     }
 
@@ -87,7 +102,6 @@ impl MemoryController {
         delete_memory_parameters: generated::DeleteMemoryParameters,
     ) -> Result<()> {
         let memory_store = get_memory_store().await;
-
         memory_store
             .delete_point(delete_memory_parameters.memory_id.as_str())
             .await?;
