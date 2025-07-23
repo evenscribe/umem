@@ -9,6 +9,7 @@ prost = "0.13"
 serde = { workspace = true }
 tokio = { workspace = true }
 rmcp = { workspace = true }
+umem_db = { workspace = true }
 
 [build-dependencies]
 tonic-build = { version="0.12" }

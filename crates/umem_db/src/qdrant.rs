@@ -1,3 +1,4 @@
+use crate::HasMemoryId;
 use anyhow::Result;
 use chrono;
 use qdrant_client::{
@@ -13,10 +14,11 @@ use qdrant_client::{
 };
 use serde::Serialize;
 use serde_json::json;
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct QdrantVectorStore {
-    client: Qdrant,
+    connection: Arc<Qdrant>,
     collection_name: String,
 }
 
@@ -51,30 +53,22 @@ impl QdrantVectorStore {
         }
 
         Ok(QdrantVectorStore {
-            client: client,
+            connection: Arc::new(client),
             collection_name: collection_name.to_string(),
         })
     }
 
-    pub async fn insert_embedding<S: Serialize>(
+    pub async fn insert_embedding<S: Serialize + HasMemoryId>(
         &self,
         payload: S,
         vectors: Vec<f32>,
     ) -> Result<()> {
-        let mut payload = Payload::try_from(json!(payload))?;
-        let uuid = Uuid::new_v4().to_string();
-        payload.insert("memory_id", uuid.as_str());
-        let now = chrono::prelude::Utc::now().timestamp();
-        payload.insert("created_at", now);
-        payload.insert("updated_at", now);
-        self.client
+        let memory_id = payload.memory_id();
+        let payload = Payload::try_from(json!(payload))?;
+        self.connection
             .upsert_points(UpsertPointsBuilder::new(
                 self.collection_name.as_str(),
-                [PointStruct::new(
-                    PointId::from(uuid.as_str()),
-                    vectors,
-                    payload,
-                )],
+                [PointStruct::new(PointId::from(memory_id), vectors, payload)],
             ))
             .await?;
         Ok(())
@@ -84,7 +78,7 @@ impl QdrantVectorStore {
         &self,
         points: Vec<(S, Vec<f32>)>,
     ) -> Result<()> {
-        self.client
+        self.connection
             .upsert_points(UpsertPointsBuilder::new(
                 self.collection_name.as_str(),
                 points
@@ -113,7 +107,7 @@ impl QdrantVectorStore {
     ) -> Result<SearchResponse> {
         let limit = limit.unwrap_or(10);
         let search_result = self
-            .client
+            .connection
             .search_points(
                 SearchPointsBuilder::new(self.collection_name.as_str(), vector, limit)
                     .with_payload(true)
@@ -133,7 +127,7 @@ impl QdrantVectorStore {
         limit: Option<u32>,
     ) -> Result<ScrollResponse> {
         let search_result = self
-            .client
+            .connection
             .scroll(
                 ScrollPointsBuilder::new(self.collection_name.as_str())
                     .filter(Filter::must(
@@ -151,7 +145,7 @@ impl QdrantVectorStore {
     }
 
     pub async fn delete_point(&self, id: &str) -> Result<()> {
-        self.client
+        self.connection
             .delete_points(
                 DeletePointsBuilder::new(self.collection_name.as_str())
                     .points(PointsIdsList {
@@ -165,7 +159,7 @@ impl QdrantVectorStore {
     }
 
     pub async fn delete_points_bulk(&self, ids: Vec<&str>) -> Result<()> {
-        self.client
+        self.connection
             .delete_points(
                 DeletePointsBuilder::new(self.collection_name.as_str())
                     .points(PointsIdsList {
@@ -184,7 +178,7 @@ impl QdrantVectorStore {
         vectors: Option<Vec<f32>>,
         payload: Option<S>,
     ) -> Result<()> {
-        self.client
+        self.connection
             .update_vectors(
                 UpdatePointVectorsBuilder::new(
                     self.collection_name.as_str(),
@@ -201,7 +195,7 @@ impl QdrantVectorStore {
             let mut payload = Payload::try_from(json!(payload))?;
             let now = chrono::prelude::Utc::now().timestamp();
             payload.insert("updated_at", now);
-            self.client
+            self.connection
                 .set_payload(
                     SetPayloadPointsBuilder::new(self.collection_name.as_str(), payload)
                         .points_selector(PointsIdsList {
