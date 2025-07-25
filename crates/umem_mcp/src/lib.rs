@@ -11,7 +11,7 @@ use umem_proto_generated::generated;
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct AddMemoryRequst {
-    pub memory: generated::Memory,
+    pub memory_content: String,
 }
 
 #[derive(Clone)]
@@ -22,7 +22,7 @@ pub struct McpService {
 impl McpService {
     pub fn new() -> Self {
         Self {
-            tool_router: ToolRouter::new(),
+            tool_router: Self::tool_router(),
         }
     }
 }
@@ -35,16 +35,21 @@ impl McpService {
     )]
     async fn add_memory(
         &self,
-        Parameters(AddMemoryRequst { memory }): Parameters<AddMemoryRequst>,
+        Parameters(AddMemoryRequst { memory_content }): Parameters<AddMemoryRequst>,
     ) -> Result<CallToolResult, McpError> {
-        if memory.content.is_empty() {
+        if memory_content.is_empty() {
             return Err(McpError::new(
                 ErrorCode::INVALID_REQUEST,
                 "Memory content cannot be empty",
                 None,
             ));
         }
-        let _ = MemoryController::add_memory(memory).await;
+        let _ = MemoryController::add_memory(generated::Memory {
+            content: memory_content,
+            user_id: "124444".into(),
+            ..Default::default()
+        })
+        .await;
         Ok(CallToolResult::success(vec![]))
     }
 }
@@ -53,6 +58,7 @@ impl McpService {
 impl rmcp::ServerHandler for McpService {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
+            protocol_version: ProtocolVersion::V_2024_11_05,
             instructions: Some("An external Memory Persistence Layer for LLM and AI Agents".into()),
             capabilities: ServerCapabilities::builder().enable_tools().build(),
             ..Default::default()
