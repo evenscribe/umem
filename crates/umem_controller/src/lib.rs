@@ -8,7 +8,7 @@ use umem_vector::QdrantVectorStore;
 
 static MEMORY_STORE: OnceCell<QdrantVectorStore> = OnceCell::const_new();
 
-async fn get_memory_store() -> &'static QdrantVectorStore {
+pub async fn get_memory_store() -> &'static QdrantVectorStore {
     MEMORY_STORE
         .get_or_init(|| async {
             QdrantVectorStore::new(

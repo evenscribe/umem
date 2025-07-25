@@ -1,13 +1,12 @@
 use anyhow::Result;
 use dotenv::dotenv;
-use umem_grpc_server::MemoryServiceGrpc;
-use umem_search::ProjectDirs;
-use umem_search::TraceIndex;
+use umem_controller::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenv().ok();
-    TraceIndex::create_index(ProjectDirs::get_trace_index_path()?)?;
-    let _ = MemoryServiceGrpc::run_server("[::1]:50051").await;
+    let _ = get_memory_store().await;
+    // let _ = MemoryServiceGrpc::run_server("[::1]:50051").await;
+    umem_mcp::McpService::run_server("").await?;
     Ok(())
 }
