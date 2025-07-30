@@ -1,0 +1,17 @@
+{
+	"mcpServers": {
+		"umem": {
+			"command": "/Users/vidurkhanal/Documents/Projects/umem/target/debug/umem",
+			"env": {
+				"QDRANT_URL":"http://0.0.0.0:6334",
+				"QDRANT_KEY":"test",
+				"QDRANT_COLLECTION_NAME":"horses",
+				"CLOUDFLARE_ACCOUNT_ID":"dffeced6f514ef3472c7ed13fada97b2",
+				"CLOUDFLARE_API_TOKEN":"GbJllQYGLLaQ42DmsxJnebOgJB-FzMFoT_9OrtDN",
+				"SQL_LITE_URL":"libsql://evenscribe-vidurkhanal.aws-us-east-1.turso.io",
+				"SQL_AUTH_TOKEN":"eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NTMyNDAyNTMsImlkIjoiODdkZWY1OWQtODYyYS00NjVkLThmMTQtMmMwYzk0OTYxODkxIiwicmlkIjoiNDkyMTgzNjQtZjdjOS00MzI1LWEzMDAtMjFkMDBhZTJmZmNkIn0.rTWOO1heTvNkIq4lFh123kQNByAwS52-LOo5r7mHezx9UODMZYtUc6vCpVTn-9XCx2tMysaVkl0S-bwirrppCA"
+			}
+
+		}
+	}
+}
