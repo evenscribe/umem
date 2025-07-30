@@ -1,13 +1,16 @@
 use anyhow::Result;
 use dotenv::dotenv;
 use umem_grpc_server::MemoryServiceGrpc;
-use umem_search::ProjectDirs;
-use umem_search::TraceIndex;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenv().ok();
-    TraceIndex::create_index(ProjectDirs::get_trace_index_path()?)?;
-    let _ = MemoryServiceGrpc::run_server("[::1]:50051").await;
+
+    let mcp_handle = tokio::spawn(async move { umem_mcp::run_server().await });
+    let grpc_handle =
+        tokio::spawn(async move { MemoryServiceGrpc::run_server("[::1]:50051").await });
+
+    let _ = tokio::try_join!(mcp_handle, grpc_handle)?;
+
     Ok(())
 }
