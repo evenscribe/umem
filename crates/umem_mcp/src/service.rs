@@ -18,14 +18,15 @@ pub struct McpService {
 }
 
 impl McpService {
-    pub fn new() -> Self {
+    pub fn new() -> std::io::Result<Self> {
         println!("Creating new McpService instance");
         let tool_router = Self::tool_router();
         let tools = tool_router.list_all();
-        println!("Registered tools: {:?}", tools.iter().map(|t| &t.name).collect::<Vec<_>>());
-        Self {
-            tool_router,
-        }
+        println!(
+            "Registered tools: {:?}",
+            tools.iter().map(|t| &t.name).collect::<Vec<_>>()
+        );
+        Ok(Self { tool_router })
     }
 }
 
@@ -64,7 +65,10 @@ impl rmcp::ServerHandler for McpService {
     fn get_info(&self) -> ServerInfo {
         println!("McpService::get_info called");
         let tools = self.tool_router.list_all();
-        println!("Available tools in get_info: {:?}", tools.iter().map(|t| &t.name).collect::<Vec<_>>());
+        println!(
+            "Available tools in get_info: {:?}",
+            tools.iter().map(|t| &t.name).collect::<Vec<_>>()
+        );
         ServerInfo {
             instructions: Some("An external Memory Persistence Layer for LLM and AI Agents".into()),
             capabilities: ServerCapabilities::builder()
