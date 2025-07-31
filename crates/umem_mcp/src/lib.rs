@@ -33,7 +33,7 @@ use uuid::Uuid;
 // Import Counter tool for MCP service
 
 const BIND_ADDRESS: &str = "127.0.0.1:3000";
-const NGROK_ADDRESS: &str = "https://38ef67e79892.ngrok-free.app/";
+const NGROK_ADDRESS: &str = "https://mcp.evenscribe.com";
 const INDEX_HTML: &str = include_str!("../templates/mcp_oauth_index.html");
 
 // A easy way to manage MCP OAuth Store for managing tokens and sessions
@@ -534,7 +534,7 @@ pub struct ProtectedResourceInner {
 async fn oauth_protected_resource_server() -> impl IntoResponse {
     let metadata = ProtectedResourceMetadata {
         authorization_servers: vec![ProtectedResourceInner {
-            authorization_endpoint: format!("http://{}/oauth/authorize", NGROK_ADDRESS),
+            authorization_endpoint: format!("{}/oauth/authorize", NGROK_ADDRESS),
             issuer: NGROK_ADDRESS.to_string(),
         }],
     };
@@ -554,12 +554,12 @@ async fn oauth_authorization_server() -> impl IntoResponse {
         Value::Array(vec![Value::String("S256".into())]),
     );
     let metadata = AuthorizationMetadata {
-        authorization_endpoint: format!("http://{}/oauth/authorize", NGROK_ADDRESS),
-        token_endpoint: format!("http://{}/oauth/token", NGROK_ADDRESS),
+        authorization_endpoint: format!("{}/oauth/authorize", NGROK_ADDRESS),
+        token_endpoint: format!("{}/oauth/token", NGROK_ADDRESS),
         scopes_supported: Some(vec!["profile".to_string(), "email".to_string()]),
-        registration_endpoint: format!("http://{}/oauth/register", NGROK_ADDRESS),
+        registration_endpoint: format!("{}/oauth/register", NGROK_ADDRESS),
         issuer: Some(NGROK_ADDRESS.to_string()),
-        jwks_uri: Some(format!("http://{}/oauth/jwks", NGROK_ADDRESS)),
+        jwks_uri: Some(format!("{}/oauth/jwks", NGROK_ADDRESS)),
         additional_fields,
     };
     debug!("metadata: {:?}", metadata);
@@ -693,7 +693,7 @@ pub async fn run_server() -> Result<()> {
     let cors_layer = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
-        .allow_origin(Any);
+        .allow_headers(Any);
 
     // Create a sub-router for the oauth authorization server endpoint with CORS
     let oauth_server_router = Router::new()
@@ -708,7 +708,9 @@ pub async fn run_server() -> Result<()> {
         .route("/oauth/token", post(oauth_token).options(oauth_token))
         .route(
             "/oauth/register",
-            post(oauth_register).options(oauth_register),
+            get("<html>OAuth Register</html>")
+                .post(oauth_register)
+                .options(oauth_register),
         )
         .layer(cors_layer)
         .with_state(oauth_store.clone());
@@ -719,8 +721,8 @@ pub async fn run_server() -> Result<()> {
         .route("/mcp", get(index))
         .route("/oauth/authorize", get(oauth_authorize))
         .route("/oauth/approve", post(oauth_approve))
-        .merge(oauth_server_router) // Merge the CORS-enabled oauth server router
         // .merge(protected_sse_router)
+        .merge(oauth_server_router) // Merge the CORS-enabled oauth server router
         .with_state(oauth_store.clone())
         .layer(middleware::from_fn(log_request));
 
