@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -82,6 +83,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>MCP OAuth</h1>
@@ -89,13 +91,13 @@
             <p><strong>{{ client_id }}</strong> requests access to your account.</p>
             <p>requested scopes: {{ scopes }}</p>
         </div>
-        
+
         <form action="/oauth/approve" method="post">
             <input type="hidden" name="client_id" value="{{ client_id }}">
             <input type="hidden" name="redirect_uri" value="{{ redirect_uri }}">
             <input type="hidden" name="scope" value="{{ scope }}">
             <input type="hidden" name="state" value="{{ state }}">
-            
+
             <div class="btn-group">
                 <button type="submit" name="approved" value="true" class="btn btn-primary">Approve</button>
                 <button type="submit" name="approved" value="false" class="btn btn-secondary">Reject</button>
@@ -103,4 +105,5 @@
         </form>
     </div>
 </body>
+
 </html>

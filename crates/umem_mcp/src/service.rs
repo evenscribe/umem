@@ -18,7 +18,7 @@ pub struct McpService {
 }
 
 impl McpService {
-    pub fn new() -> std::io::Result<Self> {
+    pub fn new() -> Self {
         println!("Creating new McpService instance");
         let tool_router = Self::tool_router();
         let tools = tool_router.list_all();
@@ -26,7 +26,7 @@ impl McpService {
             "Registered tools: {:?}",
             tools.iter().map(|t| &t.name).collect::<Vec<_>>()
         );
-        Ok(Self { tool_router })
+        Self { tool_router }
     }
 }
 
