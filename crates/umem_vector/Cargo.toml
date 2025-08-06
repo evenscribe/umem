@@ -8,7 +8,7 @@ anyhow.workspace = true
 qdrant-client = "1.14.0"
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 tonic = "0.13.1"
-uuid = { version = "1.17.0", features = ["v4"] }
 serde_json = {workspace = true}
+chrono = {workspace = true}
 serde = {workspace = true}
-chrono = "0.4.41"
+uuid = {workspace = true, features=["v4"]}

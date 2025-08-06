@@ -17,12 +17,17 @@ umem_web_scrapper = {path = "crates/umem_web_scrapper"}
 umem_summarizer = {path = "crates/umem_summarizer"}
 umem_proto_generated = {path = "crates/umem_proto_generated"}
 umem_controller = {path = "crates/umem_controller"}
+umem_mcp = {path = "crates/umem_mcp"}
 anyhow = "1.0.98"
 tokio = { version = "1.45.1", features = ["macros","rt-multi-thread","rt"] }
 serde_json = "1.0.140"
 lazy_static = "1.5.0"
 reqwest = { version = "0.12", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
+rmcp = { version = "0.3.0", features = ["server", "macros", "transport-io", "transport-streamable-http-server", "transport-worker", "transport-sse-server"]}
+chrono = "0.4.41"
+uuid = { version = "1.17.0", features = ["v4"] }
+base64 = { version = "0.22.1"}
 
 [dependencies]
 umem_search = { workspace = true }
@@ -30,9 +35,13 @@ umem_grpc_server = { workspace = true }
 umem_summarizer = { workspace = true }
 umem_controller = { workspace = true }
 umem_proto_generated = { workspace = true }
+umem_mcp = { workspace = true }
 anyhow = { workspace = true }
-tokio = { workspace = true, features = ["rt-multi-thread"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "signal"] }
 serde_json = { workspace = true }
 reqwest = { workspace = true, features = ["json"] }
 serde = { workspace = true, features = ["derive"] }
+rmcp = { workspace = true }
+chrono = { workspace = true }
 dotenv = "0.15.0"
+uuid = { workspace = true, features = ["v4"] }

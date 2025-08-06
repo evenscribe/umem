@@ -64,7 +64,7 @@ impl QdrantVectorStore {
         let mut payload = Payload::try_from(json!(payload))?;
         let uuid = Uuid::new_v4().to_string();
         payload.insert("memory_id", uuid.as_str());
-        let now = chrono::prelude::Utc::now().timestamp();
+        let now = chrono::Utc::now().timestamp();
         payload.insert("created_at", now);
         payload.insert("updated_at", now);
         self.client
