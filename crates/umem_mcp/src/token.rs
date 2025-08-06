@@ -45,8 +45,6 @@ pub async fn check_token(token: &str, keys: &JWKS) -> Result<TokenData<Claims>, 
 
     let mut validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256);
 
-    validation.validate_exp;
-
     let token_data = jsonwebtoken::decode::<Claims>(token, &decoding_key, &validation)
         .map_err(|op| format!("Error: {:?}", op))?;
 

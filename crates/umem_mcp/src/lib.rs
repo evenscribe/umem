@@ -630,7 +630,7 @@ async fn workos_callback(Query(params): Query<HashMap<String, String>>) -> impl 
 
     let response_url = reqwest::Url::parse_with_params(
         &decoded_state.original_redirect_uri,
-        &[("code", &code), ("state", &state)],
+        &[("code", &code), ("state", &decoded_state.original_state)],
     )
     .unwrap();
 
