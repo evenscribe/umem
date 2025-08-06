@@ -23,15 +23,11 @@ pub struct JWKS {
 
 pub async fn get_jwks(jwks_url: String) -> JWKS {
     let jwks_resp = reqwest::get(jwks_url).await.unwrap();
-
-    let jwks: JWKS = jwks_resp.json().await.unwrap();
-
-    jwks
+    jwks_resp.json().await.unwrap()
 }
 
 pub async fn check_token(token: &str, keys: &JWKS) -> Result<TokenData<Claims>, String> {
     let header = decode_header(token).unwrap();
-
     let kid = header.kid.ok_or("No kid found in token header")?;
 
     let jwk = keys
@@ -42,9 +38,7 @@ pub async fn check_token(token: &str, keys: &JWKS) -> Result<TokenData<Claims>, 
 
     let decoding_key = DecodingKey::from_rsa_components(&jwk.n, &jwk.e)
         .map_err(|op| format!("Error: {:?}", op))?;
-
-    let mut validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256);
-
+    let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256);
     let token_data = jsonwebtoken::decode::<Claims>(token, &decoding_key, &validation)
         .map_err(|op| format!("Error: {:?}", op))?;
 

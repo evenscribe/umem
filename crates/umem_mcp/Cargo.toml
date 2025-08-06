@@ -15,7 +15,6 @@ rmcp = {workspace = true, features=["auth"] }
 chrono = {workspace = true}
 tracing-subscriber = {version="0.3.19", features = ["env-filter", "fmt"]}
 axum = {version="0.8.4", features=["macros"]}
-askama = { version = "0.14" }
 rand = { version = "0.9", features = ["std"] }
 tower-http = { version = "0.6", features = ["cors"] }
 serde_json = {workspace= true}
