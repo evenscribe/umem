@@ -30,6 +30,11 @@ pub async fn check_token(token: &str, keys: &JWKS) -> Result<TokenData<Claims>, 
     let header = decode_header(token).unwrap();
     let kid = header.kid.ok_or("No kid found in token header")?;
 
+    let client_id = match std::env::var("WORKOS_CLIENT_ID") {
+        Ok(id) => id,
+        Err(_) => return Err("WORKOS_CLIENT_ID environment variable not set".to_string()),
+    };
+
     let jwk = keys
         .keys
         .iter()
@@ -37,12 +42,13 @@ pub async fn check_token(token: &str, keys: &JWKS) -> Result<TokenData<Claims>, 
         .ok_or("No matching kid found in jwks")?;
 
     let decoding_key = DecodingKey::from_rsa_components(&jwk.n, &jwk.e)
-        .map_err(|op| format!("Error: {:?}", op))?;
-    let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256);
-    let token_data = jsonwebtoken::decode::<Claims>(token, &decoding_key, &validation)
-        .map_err(|op| format!("Error: {:?}", op))?;
+        .map_err(|op| format!("Decoding Key Error: {:?}", op))?;
 
-    println!("{:?}", token_data.claims);
+    let mut validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256);
+    validation.set_audience(&[client_id]);
+
+    let token_data = jsonwebtoken::decode::<Claims>(token, &decoding_key, &validation)
+        .map_err(|op| format!("JWT Decode Error: {:?}", op))?;
 
     Ok(token_data)
 }
