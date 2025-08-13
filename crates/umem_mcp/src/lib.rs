@@ -259,13 +259,16 @@ pub struct ProtectedResourceInner {
 }
 
 async fn oauth_protected_resource_server() -> impl IntoResponse {
-     let workos_authkit_url = match std::env::var("WORKOS_AUTHKIT_URL") {
-         Ok(url) => url,
-         Err(_) => {
-             return (StatusCode::INTERNAL_SERVER_ERROR, "WORKOS_AUTHKIT_URL not set")
-                 .into_response();
-         }
-     };
+    let workos_authkit_url = match std::env::var("WORKOS_AUTHKIT_URL") {
+        Ok(url) => url,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "WORKOS_AUTHKIT_URL not set",
+            )
+                .into_response();
+        }
+    };
 
     let metadata = json!({
         "resource": REMOTE_ADDRESS,
@@ -274,7 +277,7 @@ async fn oauth_protected_resource_server() -> impl IntoResponse {
     });
 
     debug!("metadata: {:?}", metadata);
-    (StatusCode::OK, Json(metadata))
+    (StatusCode::OK, Json(metadata)).into_response()
 }
 
 async fn oauth_authorization_server() -> impl IntoResponse {
