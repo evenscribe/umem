@@ -26,7 +26,6 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 const BIND_ADDRESS: &str = "127.0.0.1:3000";
 const REMOTE_ADDRESS: &str = "https://m.evenscribe.com";
 const INDEX_HTML: &str = include_str!("../templates/mcp_oauth_index.html");
-const ISSUER_WORKOS: &str = "https://api.workos.com";
 
 #[derive(Clone, Debug)]
 struct McpOAuthStore {
@@ -36,17 +35,20 @@ struct McpOAuthStore {
 }
 
 impl McpOAuthStore {
-    async fn new() -> Self {
-        let workos_client_id: String = std::env::var("WORKOS_CLIENT_ID").unwrap();
-        let workos_client_secret: String = std::env::var("WORKOS_CLIENT_SECRET").unwrap();
-        let jwks_url = std::env::var("JWKS_URL").expect("JWKS_URL must be set");
+    async fn new() -> Result<Self> {
+        let workos_client_id = std::env::var("WORKOS_CLIENT_ID")
+            .map_err(|_| anyhow::anyhow!("WORKOS_CLIENT_ID environment variable not set"))?;
+        let workos_client_secret = std::env::var("WORKOS_CLIENT_SECRET")
+            .map_err(|_| anyhow::anyhow!("WORKOS_CLIENT_SECRET environment variable not set"))?;
+        let jwks_url = std::env::var("JWKS_URL")
+            .map_err(|_| anyhow::anyhow!("JWKS_URL environment variable not set"))?;
         let jwks = token::get_jwks(jwks_url).await;
 
-        Self {
+        Ok(Self {
             jwks: Arc::new(jwks),
             workos_client_id,
             workos_client_secret,
-        }
+        })
     }
 }
 
@@ -121,7 +123,17 @@ async fn oauth_authorize(
         original_redirect_uri: params.redirect_uri.clone(),
     };
 
-    let url = reqwest::Url::parse_with_params(
+    let state_json = match serde_json::to_string(&local_state) {
+        Ok(json) => json,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to serialize state parameter"
+            ).into_response();
+        }
+    };
+
+    let url = match reqwest::Url::parse_with_params(
         "https://api.workos.com/user_management/authorize",
         &[
             ("response_type", "code"),
@@ -142,14 +154,18 @@ async fn oauth_authorize(
                     .as_str(),
             ),
             ("provider", "authkit"),
-            (
-                "state",
-                serde_json::to_string(&local_state).unwrap().as_str(),
-            ),
+            ("state", &state_json),
             ("scope", "openid profile email offline_access"),
         ],
-    )
-    .unwrap();
+    ) {
+        Ok(url) => url,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to construct authorization URL"
+            ).into_response();
+        }
+    };
 
     Redirect::temporary(url.as_str()).into_response()
 }
@@ -169,8 +185,24 @@ async fn oauth_token(
 
     let request = match grant_type.as_str() {
         "authorization_code" => {
-            let code = form_state.get("code").unwrap();
-            let code_verifier = form_state.get("code_verifier").unwrap();
+            let code = match form_state.get("code") {
+                Some(code) => code,
+                None => {
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        "Missing required parameter: code"
+                    ).into_response();
+                }
+            };
+            let code_verifier = match form_state.get("code_verifier") {
+                Some(verifier) => verifier,
+                None => {
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        "Missing required parameter: code_verifier"
+                    ).into_response();
+                }
+            };
             json!({
                 "client_id": state.workos_client_id,
                 "client_secret": state.workos_client_secret,
@@ -180,7 +212,15 @@ async fn oauth_token(
             })
         }
         "refresh_token" => {
-            let refresh_token = form_state.get("refresh_token").unwrap();
+            let refresh_token = match form_state.get("refresh_token") {
+                Some(token) => token,
+                None => {
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        "Missing required parameter: refresh_token"
+                    ).into_response();
+                }
+            };
             json!({
                 "client_id": state.workos_client_id,
                 "client_secret": state.workos_client_secret,
@@ -188,18 +228,60 @@ async fn oauth_token(
                 "refresh_token": refresh_token,
             })
         }
-        _ => panic!("Invalid grant type"),
+        _ => {
+            return (
+                StatusCode::BAD_REQUEST,
+                "Invalid grant type. Supported types: authorization_code, refresh_token"
+            ).into_response();
+        }
     };
 
-    let response = client
+    let request_body = match serde_json::to_string(&request) {
+        Ok(body) => body,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to serialize request"
+            ).into_response();
+        }
+    };
+
+    let response = match client
         .post("https://api.workos.com/user_management/authenticate")
-        .body(serde_json::to_string(&request).unwrap())
+        .body(request_body)
         .header("Content-Type", "application/json")
         .send()
         .await
-        .unwrap();
-    let authkit_response: AuthkitAuthResult =
-        serde_json::from_str(response.text().await.unwrap().as_str()).unwrap();
+    {
+        Ok(resp) => resp,
+        Err(_) => {
+            return (
+                StatusCode::BAD_GATEWAY,
+                "Failed to communicate with authentication service"
+            ).into_response();
+        }
+    };
+
+    let response_text = match response.text().await {
+        Ok(text) => text,
+        Err(_) => {
+            return (
+                StatusCode::BAD_GATEWAY,
+                "Failed to read response from authentication service"
+            ).into_response();
+        }
+    };
+
+    let authkit_response: AuthkitAuthResult = match serde_json::from_str(&response_text) {
+        Ok(auth_result) => auth_result,
+        Err(_) => {
+            return (
+                StatusCode::BAD_GATEWAY,
+                "Invalid response from authentication service"
+            ).into_response();
+        }
+    };
+
     let expires_at = chrono::Utc::now().timestamp() + 3600;
 
     (
@@ -284,14 +366,15 @@ async fn oauth_protected_resource_server() -> impl IntoResponse {
 }
 
 async fn oauth_authorization_server() -> impl IntoResponse {
-    let workos_authkit_url = std::env::var("WORKOS_AUTHKIT_URL")
-        .map_err(|_| {
-            (
+    let workos_authkit_url = match std::env::var("WORKOS_AUTHKIT_URL") {
+        Ok(url) => url,
+        Err(_) => {
+            return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "WORKOS_AUTHKIT_URL not set",
-            )
-        })
-        .unwrap();
+                "WORKOS_AUTHKIT_URL environment variable not set",
+            ).into_response();
+        }
+    };
 
     let metadata = json!({
     "authorization_endpoint": format!("{}/oauth2/authorize", workos_authkit_url),
@@ -309,12 +392,28 @@ async fn oauth_authorization_server() -> impl IntoResponse {
     });
     debug!("metadata: {:?}", metadata);
 
-    Response::builder()
+    let metadata_json = match serde_json::to_string(&metadata) {
+        Ok(json) => json,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to serialize metadata"
+            ).into_response();
+        }
+    };
+
+    match Response::builder()
         .status(StatusCode::OK)
         .header("Content-Type", "application/json")
         .header("MCP-Protocol-Version", "2025-03-26")
-        .body(Body::from(serde_json::to_string(&metadata).unwrap()))
-        .unwrap()
+        .body(Body::from(metadata_json))
+    {
+        Ok(response) => response.into_response(),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to build response"
+        ).into_response(),
+    }
 }
 
 async fn log_request(request: Request<Body>, next: Next) -> Response {
@@ -359,13 +458,29 @@ async fn log_request(request: Request<Body>, next: Next) -> Response {
 async fn workos_callback(Query(params): Query<HashMap<String, String>>) -> impl IntoResponse {
     let code = params.get("code").cloned().unwrap_or_default();
     let state = params.get("state").cloned().unwrap_or_default();
-    let decoded_state = serde_json::from_str::<WorkOsState>(&state).unwrap();
+    
+    let decoded_state = match serde_json::from_str::<WorkOsState>(&state) {
+        Ok(state) => state,
+        Err(_) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                "Invalid or malformed state parameter"
+            ).into_response();
+        }
+    };
 
-    let response_url = reqwest::Url::parse_with_params(
+    let response_url = match reqwest::Url::parse_with_params(
         &decoded_state.original_redirect_uri,
         &[("code", &code), ("state", &decoded_state.original_state)],
-    )
-    .unwrap();
+    ) {
+        Ok(url) => url,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to construct callback URL"
+            ).into_response();
+        }
+    };
 
     Redirect::temporary(response_url.as_str()).into_response()
 }
@@ -379,7 +494,7 @@ pub async fn run_server() -> Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let state = McpOAuthStore::new().await;
+    let state = McpOAuthStore::new().await?;
     let oauth_store = Arc::new(state);
     let addr = BIND_ADDRESS.parse::<SocketAddr>()?;
     let sse_config = SseServerConfig {
