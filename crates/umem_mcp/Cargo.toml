@@ -10,7 +10,7 @@ umem_controller = { workspace = true }
 serde = {workspace = true }
 tonic = "0.12"
 prost = "0.13"
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["signal"] }
 rmcp = {workspace = true, features=["auth"] }
 chrono = {workspace = true}
 tracing-subscriber = {version="0.3.19", features = ["env-filter", "fmt"]}
