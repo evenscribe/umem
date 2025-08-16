@@ -11,7 +11,10 @@ use axum::{
     response::{Html, IntoResponse, Redirect, Response},
     routing::{get, post},
 };
-use rmcp::transport::{SseServer, sse_server::SseServerConfig};
+use rmcp::transport::{
+    SseServer, StreamableHttpServerConfig, StreamableHttpService, sse_server::SseServerConfig,
+    streamable_http_server::session::local::LocalSessionManager,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
@@ -392,10 +395,24 @@ pub async fn run_server() -> Result<()> {
         oauth_store.clone(),
         validate_token_middleware,
     ));
+
     let cors_layer = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any);
+
+    let streamable_service = StreamableHttpService::new(
+        || Ok(service::McpService::new()),
+        LocalSessionManager::default().into(),
+        StreamableHttpServerConfig::default(),
+    );
+
+    let streamable_router = Router::new()
+        .nest_service("/mcp", streamable_service)
+        .layer(middleware::from_fn_with_state(
+            oauth_store.clone(),
+            validate_token_middleware,
+        ));
 
     let oauth_server_router = Router::new()
         .route(
@@ -413,13 +430,13 @@ pub async fn run_server() -> Result<()> {
 
     let app = Router::new()
         .route("/", get(index))
-        .route("/mcp", get(index))
         .route("/oauth/authorize", get(oauth_authorize))
         .merge(oauth_server_router)
         .with_state(oauth_store.clone())
         .layer(middleware::from_fn(log_request));
 
-    let app = app.merge(protected_sse_router);
+    let app = app.merge(protected_sse_router).merge(streamable_router);
+
     let cancel_token = sse_server.config.ct.clone();
     let cancel_token2 = sse_server.config.ct.clone();
     sse_server.with_service(service::McpService::new);
