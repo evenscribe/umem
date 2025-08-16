@@ -11,10 +11,12 @@ use axum::{
     response::{Html, IntoResponse, Redirect, Response},
     routing::{get, post},
 };
-use rmcp::transport::auth::AuthorizationMetadata;
-use rmcp::transport::{SseServer, sse_server::SseServerConfig};
+use rmcp::transport::{
+    SseServer, StreamableHttpServerConfig, StreamableHttpService, sse_server::SseServerConfig,
+    streamable_http_server::session::local::LocalSessionManager,
+};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::json;
 use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
 use tokio_util::sync::CancellationToken;
 use tower_http::cors::{Any, CorsLayer};
@@ -22,7 +24,7 @@ use tracing::{debug, error, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 const BIND_ADDRESS: &str = "127.0.0.1:3000";
-const REMOTE_ADDRESS: &str = "https://mccp.evenscribe.com";
+const REMOTE_ADDRESS: &str = "https://m.evenscribe.com";
 const INDEX_HTML: &str = include_str!("../templates/mcp_oauth_index.html");
 const ISSUER_WORKOS: &str = "https://api.workos.com";
 
@@ -124,7 +126,10 @@ async fn oauth_authorize(
         &[
             ("response_type", "code"),
             ("client_id", &state.workos_client_id),
-            ("redirect_uri", "https://mccp.evenscribe.com/mcp/callback"),
+            (
+                "redirect_uri",
+                format!("{}/mcp/callback", REMOTE_ADDRESS).as_str(),
+            ),
             (
                 "code_challenge",
                 params.code_challenge.unwrap_or(String::new()).as_str(),
@@ -231,6 +236,7 @@ async fn validate_token_middleware(
         }
     };
 
+    println!("{:?}", &token_store.jwks);
     let claims = token::check_token(token.as_str(), &Arc::clone(&token_store.jwks)).await;
     match claims {
         Ok(tk) => {
@@ -256,39 +262,59 @@ pub struct ProtectedResourceInner {
 }
 
 async fn oauth_protected_resource_server() -> impl IntoResponse {
-    let metadata = ProtectedResourceMetadata {
-        authorization_servers: vec![ProtectedResourceInner {
-            authorization_endpoint: format!("{}/oauth/authorize", REMOTE_ADDRESS),
-            issuer: ISSUER_WORKOS.to_string(),
-        }],
+    let workos_authkit_url = match std::env::var("WORKOS_AUTHKIT_URL") {
+        Ok(url) => url,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "WORKOS_AUTHKIT_URL not set",
+            )
+                .into_response();
+        }
     };
+
+    let metadata = json!({
+        "resource": REMOTE_ADDRESS,
+        "authorization_servers": [workos_authkit_url],
+        "bearer_methods_supported": ["header"],
+    });
+
     debug!("metadata: {:?}", metadata);
-    (StatusCode::OK, Json(metadata))
+    (StatusCode::OK, Json(metadata)).into_response()
 }
 
 async fn oauth_authorization_server() -> impl IntoResponse {
-    let mut additional_fields = HashMap::new();
-    additional_fields.insert(
-        "response_types_supported".into(),
-        Value::Array(vec![Value::String("code".into())]),
-    );
-    additional_fields.insert(
-        "code_challenge_methods_supported".into(),
-        Value::Array(vec![Value::String("S256".into())]),
-    );
-    let metadata = AuthorizationMetadata {
-        authorization_endpoint: format!("{}/oauth/authorize", REMOTE_ADDRESS),
-        token_endpoint: format!("{}/oauth/token", REMOTE_ADDRESS),
-        scopes_supported: Some(vec!["profile".to_string(), "email".to_string()]),
-        registration_endpoint: format!("{}/oauth/register", REMOTE_ADDRESS),
-        issuer: Some(ISSUER_WORKOS.to_string()),
-        jwks_uri: Some(
-            "https://api.workos.com/sso/jwks/client_01K1HS6DV6AVDJKYSVSD6XRZQN".to_string(),
-        ),
-        additional_fields,
-    };
+    let workos_authkit_url = std::env::var("WORKOS_AUTHKIT_URL")
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "WORKOS_AUTHKIT_URL not set",
+            )
+        })
+        .unwrap();
+
+    let metadata = json!({
+    "authorization_endpoint": format!("{}/oauth2/authorize", workos_authkit_url),
+    "code_challenge_methods_supported": [ "S256" ],
+    "grant_types_supported": [ "authorization_code", "refresh_token" ],
+    "introspection_endpoint": format!("{}/oauth2/introspection", workos_authkit_url),
+    "issuer": workos_authkit_url,
+    "jwks_uri": format!("{}/oauth2/jwks", workos_authkit_url),
+    "registration_endpoint": format!("{}/oauth2/register", workos_authkit_url),
+    "scopes_supported": [ "email", "offline_access", "openid", "profile" ],
+    "response_modes_supported": [ "query" ],
+    "response_types_supported": [ "code" ],
+    "token_endpoint": format!("{}/oauth2/token", workos_authkit_url),
+    "token_endpoint_auth_methods_supported": [ "none", "client_secret_post", "client_secret_basic" ]
+    });
     debug!("metadata: {:?}", metadata);
-    (StatusCode::OK, Json(metadata))
+
+    Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", "application/json")
+        .header("MCP-Protocol-Version", "2025-03-26")
+        .body(Body::from(serde_json::to_string(&metadata).unwrap()))
+        .unwrap()
 }
 
 async fn log_request(request: Request<Body>, next: Next) -> Response {
@@ -369,10 +395,24 @@ pub async fn run_server() -> Result<()> {
         oauth_store.clone(),
         validate_token_middleware,
     ));
+
     let cors_layer = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any);
+
+    let streamable_service = StreamableHttpService::new(
+        || Ok(service::McpService::new()),
+        LocalSessionManager::default().into(),
+        StreamableHttpServerConfig::default(),
+    );
+
+    let streamable_router = Router::new()
+        .nest_service("/mcp", streamable_service)
+        .layer(middleware::from_fn_with_state(
+            oauth_store.clone(),
+            validate_token_middleware,
+        ));
 
     let oauth_server_router = Router::new()
         .route(
@@ -390,13 +430,13 @@ pub async fn run_server() -> Result<()> {
 
     let app = Router::new()
         .route("/", get(index))
-        .route("/mcp", get(index))
         .route("/oauth/authorize", get(oauth_authorize))
         .merge(oauth_server_router)
         .with_state(oauth_store.clone())
         .layer(middleware::from_fn(log_request));
 
-    let app = app.merge(protected_sse_router);
+    let app = app.merge(protected_sse_router).merge(streamable_router);
+
     let cancel_token = sse_server.config.ct.clone();
     let cancel_token2 = sse_server.config.ct.clone();
     sse_server.with_service(service::McpService::new);

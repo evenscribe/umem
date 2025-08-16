@@ -35,11 +35,11 @@ jobs:
     
     - name: Build (Release)
       if: github.ref == 'refs/heads/main'
-      run: cargo build --release --verbose
+      run: cargo build --release
     
     - name: Build (Debug)
       if: github.ref != 'refs/heads/main'
-      run: cargo build --verbose
+      run: cargo build
     
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test
