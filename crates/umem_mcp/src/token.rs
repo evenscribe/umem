@@ -9,7 +9,7 @@ pub struct Claims {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct JWK {
+pub struct Jwk {
     pub kid: String,
     pub kty: String,
     pub alg: String,
@@ -18,16 +18,16 @@ pub struct JWK {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct JWKS {
-    pub keys: Vec<JWK>,
+pub struct Jwks {
+    pub keys: Vec<Jwk>,
 }
 
-pub async fn get_jwks(jwks_url: String) -> Result<JWKS> {
+pub async fn get_jwks(jwks_url: String) -> Result<Jwks> {
     let jwks_resp = reqwest::get(jwks_url).await?;
     Ok(jwks_resp.json().await?)
 }
 
-pub async fn check_token(token: &str, keys: &JWKS) -> Result<TokenData<Claims>, String> {
+pub async fn check_token(token: &str, keys: &Jwks) -> Result<TokenData<Claims>, String> {
     let header = decode_header(token).unwrap();
     let kid = header.kid.ok_or("No kid found in token header")?;
 

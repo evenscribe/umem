@@ -15,7 +15,6 @@ use rmcp::transport::{
     SseServer, StreamableHttpServerConfig, StreamableHttpService, sse_server::SseServerConfig,
     streamable_http_server::session::local::LocalSessionManager,
 };
-use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 use tokio_util::sync::CancellationToken;
@@ -28,7 +27,7 @@ const REMOTE_ADDRESS: &str = "https://m.evenscribe.com";
 
 #[derive(Clone, Debug)]
 struct McpAppState {
-    jwks: Arc<token::JWKS>,
+    jwks: Arc<token::Jwks>,
 }
 
 impl McpAppState {
@@ -41,60 +40,6 @@ impl McpAppState {
             jwks: Arc::new(jwks),
         }
     }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-struct AuthToken {
-    access_token: String,
-    token_type: String,
-    expires_in: u64,
-    refresh_token: String,
-    scope: Option<String>,
-}
-
-#[allow(dead_code)]
-#[derive(Debug, Deserialize)]
-struct AuthorizeQuery {
-    response_type: String,
-    code_challenge: Option<String>,
-    code_challenge_method: Option<String>,
-    client_id: String,
-    redirect_uri: String,
-    scope: Option<String>,
-    state: Option<String>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct TokenRequest {
-    grant_type: String,
-    #[serde(default)]
-    code: String,
-    #[serde(default)]
-    client_id: String,
-    #[serde(default)]
-    client_secret: String,
-    #[serde(default)]
-    redirect_uri: String,
-    #[serde(default)]
-    code_verifier: Option<String>,
-    #[serde(default)]
-    refresh_token: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct UserInfo {
-    sub: String,
-    name: String,
-    email: String,
-    username: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct WorkOsState {
-    client_id: String,
-    original_state: String,
-    scopes: String,
-    original_redirect_uri: String,
 }
 
 async fn validate_token_middleware(
@@ -172,8 +117,10 @@ async fn oauth_authorization_server() -> impl IntoResponse {
         .status(StatusCode::OK)
         .header("Content-Type", "application/json")
         .header("MCP-Protocol-Version", "2025-03-26")
-        .body(Body::from(serde_json::to_string(&metadata).unwrap()))
-        .unwrap()
+        .body(Body::from(
+            serde_json::to_string(&metadata).expect("Metadata unwrap failed."),
+        ))
+        .unwrap_or_else(|e| panic!("{}", e))
 }
 
 fn build_stream_http(app_state: Arc<McpAppState>) -> Router {
@@ -183,14 +130,12 @@ fn build_stream_http(app_state: Arc<McpAppState>) -> Router {
         StreamableHttpServerConfig::default(),
     );
 
-    let streamable_router = Router::new()
+    Router::new()
         .nest_service("/mcp", streamable_service)
         .layer(middleware::from_fn_with_state(
             app_state,
             validate_token_middleware,
-        ));
-
-    streamable_router
+        ))
 }
 
 fn build_sse(addr: SocketAddr, app_state: Arc<McpAppState>) -> Router {
@@ -204,11 +149,10 @@ fn build_sse(addr: SocketAddr, app_state: Arc<McpAppState>) -> Router {
 
     let (sse_server, sse_router) = SseServer::new(sse_config);
     sse_server.with_service(service::McpService::new);
-    let protected_sse_router = sse_router.layer(middleware::from_fn_with_state(
+    sse_router.layer(middleware::from_fn_with_state(
         app_state,
         validate_token_middleware,
-    ));
-    protected_sse_router
+    ))
 }
 
 fn build_auth_router(app_state: Arc<McpAppState>) -> Router {
@@ -217,7 +161,7 @@ fn build_auth_router(app_state: Arc<McpAppState>) -> Router {
         .allow_methods(Any)
         .allow_headers(Any);
 
-    let oauth_server_router = Router::new()
+    Router::new()
         .route(
             "/.well-known/oauth-protected-resource",
             get(oauth_protected_resource_server).options(oauth_protected_resource_server),
@@ -227,9 +171,7 @@ fn build_auth_router(app_state: Arc<McpAppState>) -> Router {
             get(oauth_authorization_server).options(oauth_authorization_server),
         )
         .layer(cors_layer)
-        .with_state(app_state);
-
-    oauth_server_router
+        .with_state(app_state)
 }
 
 pub async fn run_server() -> Result<()> {
@@ -249,7 +191,6 @@ pub async fn run_server() -> Result<()> {
     let oauth_server_router = build_auth_router(Arc::clone(&app_state));
 
     let app = Router::new().merge(oauth_server_router);
-
     let app = app.merge(protected_sse_router).merge(streamable_router);
 
     info!("MCP OAuth Server started on {}", addr);
