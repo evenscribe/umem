@@ -1,3 +1,4 @@
+use anyhow::Result;
 use jsonwebtoken::{DecodingKey, TokenData, decode_header};
 use serde::{Deserialize, Serialize};
 
@@ -21,9 +22,9 @@ pub struct JWKS {
     pub keys: Vec<JWK>,
 }
 
-pub async fn get_jwks(jwks_url: String) -> JWKS {
-    let jwks_resp = reqwest::get(jwks_url).await.unwrap();
-    jwks_resp.json().await.unwrap()
+pub async fn get_jwks(jwks_url: String) -> Result<JWKS> {
+    let jwks_resp = reqwest::get(jwks_url).await?;
+    Ok(jwks_resp.json().await?)
 }
 
 pub async fn check_token(token: &str, keys: &JWKS) -> Result<TokenData<Claims>, String> {
