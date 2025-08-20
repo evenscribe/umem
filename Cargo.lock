@@ -3,6 +3,31 @@
 version = 4
 
 [[package]]
+name = "Umem"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "dirs",
+ "dotenv",
+ "reqwest",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "umem_controller",
+ "umem_grpc_server",
+ "umem_mcp",
+ "umem_proto_generated",
+ "umem_search",
+ "umem_summarizer",
+ "uuid",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -643,6 +668,15 @@ name = "directories"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "16f5094c54661b38d03bd7e50df373292118db60b585c08a411c6d840017fe7d"
+dependencies = [
+ "dirs-sys",
+]
+
+[[package]]
+name = "dirs"
+version = "6.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3e8aa94d75141228480295a7d0e7feb620b1a5ad9f12bc40be62411e38cce4e"
 dependencies = [
  "dirs-sys",
 ]
@@ -3568,6 +3602,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-appender"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3566e8ce28cc0a3fe42519fc80e6b4c943cc4c8cef275620eb8dac2d3d4e06cf"
+dependencies = [
+ "crossbeam-channel",
+ "thiserror 1.0.69",
+ "time",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "tracing-attributes"
 version = "0.1.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3630,27 +3676,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1dccffe3ce07af9386bfd29e80c0ab1a8205a2fc34e4bcd40364df902cfa8f3f"
 
 [[package]]
-name = "umem"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "dotenv",
- "reqwest",
- "rmcp",
- "serde",
- "serde_json",
- "tokio",
- "umem_controller",
- "umem_grpc_server",
- "umem_mcp",
- "umem_proto_generated",
- "umem_search",
- "umem_summarizer",
- "uuid",
-]
-
-[[package]]
 name = "umem_controller"
 version = "0.1.0"
 dependencies = [
@@ -3695,6 +3720,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "tonic 0.12.3",
+ "tracing",
  "umem_controller",
  "umem_proto_generated",
 ]

@@ -20,7 +20,6 @@ use std::{net::SocketAddr, sync::Arc, time::Duration};
 use tokio_util::sync::CancellationToken;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, info};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 const BIND_ADDRESS: &str = "127.0.0.1:3000";
 const REMOTE_ADDRESS: &str = "https://m.evenscribe.com";
@@ -175,14 +174,6 @@ fn build_auth_router(app_state: Arc<McpAppState>) -> Router {
 }
 
 pub async fn run_server() -> Result<()> {
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "debug".to_string().into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
-
     let addr = BIND_ADDRESS.parse()?;
     let app_state = Arc::new(McpAppState::new().await);
 

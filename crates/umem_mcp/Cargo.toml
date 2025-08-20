@@ -13,18 +13,18 @@ prost = "0.13"
 tokio = { workspace = true }
 rmcp = {workspace = true, features=["auth"] }
 chrono = {workspace = true}
-tracing-subscriber = {version="0.3.19", features = ["env-filter", "fmt"]}
 axum = {version="0.8.4", features=["macros"]}
 rand = { version = "0.9", features = ["std"] }
 tower-http = { version = "0.6", features = ["cors"] }
 serde_json = {workspace= true}
-uuid={workspace=true, features=["v4"]}
-tracing = "0.1"
+uuid = {workspace=true, features=["v4"]}
 tokio-util = { version = "0.7", features = ["codec"] }
 serde_urlencoded = "0.7.1"
 reqwest = { workspace = true}
 base64 = { workspace = true}
 jsonwebtoken = "9.3.1"
+tracing-subscriber = { workspace = true }
+tracing = { workspace = true }
 
 [dev-dependencies]
 tokio-stream = { version = "0.1" }
