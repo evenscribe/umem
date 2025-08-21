@@ -36,10 +36,12 @@ pub fn init_tracing() -> Result<WorkerGuard> {
     let stdout_layer = fmt::layer()
         .with_writer(io::stdout.with_max_level(tracing::Level::INFO))
         .with_ansi(true)
-        .with_target(false)
-        .compact();
+        .with_target(true)
+        .with_timer(fmt::time::ChronoLocal::rfc_3339())
+        .pretty();
 
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| "debug".into());
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| "debug,tower_http=info,umem_mcp=info".into());
 
     tracing_subscriber::registry()
         .with(env_filter)

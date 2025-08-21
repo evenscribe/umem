@@ -1,11 +1,18 @@
 use anyhow::Result;
+use axum::http::{self, request::Parts};
 use rmcp::{
-    handler::server::{router::tool::ToolRouter, tool::Parameters},
+    handler::server::{
+        router::tool::ToolRouter,
+        tool::{Extension, Parameters},
+    },
     model::{ErrorData as McpError, *},
     schemars, tool, tool_handler, tool_router,
 };
+use tracing::{debug, info};
 use umem_controller::MemoryController;
 use umem_proto_generated::generated;
+
+use crate::USER_ID_HEADER;
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct AddMemoryRequst {
@@ -19,10 +26,10 @@ pub struct McpService {
 
 impl McpService {
     pub fn new() -> Self {
-        println!("Creating new McpService instance");
+        debug!("Creating new McpService instance");
         let tool_router = Self::tool_router();
         let tools = tool_router.list_all();
-        println!(
+        debug!(
             "Registered tools: {:?}",
             tools.iter().map(|t| &t.name).collect::<Vec<_>>()
         );
@@ -34,13 +41,22 @@ impl McpService {
 impl McpService {
     #[tool(
         name = "add_memory",
-        description = "Add a memory to umem persistence layer"
+        description = "Add a memory to umem persistence layer."
     )]
     async fn add_memory(
         &self,
+        Extension(parts): Extension<Parts>,
         Parameters(AddMemoryRequst { text }): Parameters<AddMemoryRequst>,
     ) -> Result<CallToolResult, McpError> {
-        println!("add_memory tool called with text: {}", text);
+        debug!("add_memory tool called with text: {}", text);
+
+        let user_id: String = parts
+            .headers
+            .get(USER_ID_HEADER)
+            .and_then(|v| v.to_str().ok())
+            .unwrap()
+            .into();
+
         if text.is_empty() {
             return Err(McpError::new(
                 ErrorCode::INVALID_REQUEST,
@@ -50,7 +66,7 @@ impl McpService {
         }
 
         let _ = MemoryController::add_memory(generated::Memory {
-            user_id: "12133".into(),
+            user_id,
             content: text,
             ..Default::default()
         })
@@ -63,9 +79,9 @@ impl McpService {
 #[tool_handler]
 impl rmcp::ServerHandler for McpService {
     fn get_info(&self) -> ServerInfo {
-        println!("McpService::get_info called");
+        debug!("McpService::get_info called");
         let tools = self.tool_router.list_all();
-        println!(
+        debug!(
             "Available tools in get_info: {:?}",
             tools.iter().map(|t| &t.name).collect::<Vec<_>>()
         );

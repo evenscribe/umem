@@ -109,6 +109,8 @@ impl Summarizer {
 
 #[cfg(test)]
 mod tests {
+    use tracing::debug;
+
     use super::*;
 
     #[tokio::test]
@@ -135,6 +137,6 @@ mod tests {
 
         let result = summarizer.summarize(text, max_length).await;
         assert!(result.is_ok(), "Summarization failed: {:?}", result.err());
-        println!("Summary: {}", result.unwrap().summary);
+        debug!("Summary: {}", result.unwrap().summary);
     }
 }
