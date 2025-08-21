@@ -1,5 +1,4 @@
 use anyhow::Result;
-use chrono;
 use qdrant_client::{
     Payload, Qdrant,
     qdrant::{
@@ -51,7 +50,7 @@ impl QdrantVectorStore {
         }
 
         Ok(QdrantVectorStore {
-            client: client,
+            client,
             collection_name: collection_name.to_string(),
         })
     }

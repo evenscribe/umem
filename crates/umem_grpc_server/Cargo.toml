@@ -8,4 +8,5 @@ tonic = "0.12"
 umem_proto_generated = { workspace = true}
 umem_controller = { workspace = true}
 anyhow = { workspace = true}
+tracing = { workspace = true }
 
