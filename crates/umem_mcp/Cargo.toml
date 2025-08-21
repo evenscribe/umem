@@ -15,7 +15,7 @@ rmcp = {workspace = true, features=["auth"] }
 chrono = {workspace = true}
 axum = {version="0.8.4", features=["macros"]}
 rand = { version = "0.9", features = ["std"] }
-tower-http = { version = "0.6", features = ["cors"] }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
 serde_json = {workspace= true}
 uuid = {workspace=true, features=["v4"]}
 tokio-util = { version = "0.7", features = ["codec"] }
@@ -25,6 +25,8 @@ base64 = { workspace = true}
 jsonwebtoken = "9.3.1"
 tracing-subscriber = { workspace = true }
 tracing = { workspace = true }
+
+
 
 [dev-dependencies]
 tokio-stream = { version = "0.1" }

@@ -6,7 +6,7 @@ use axum::{
     Json, Router,
     body::Body,
     extract::State,
-    http::{Request, StatusCode},
+    http::{HeaderValue, Request, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::get,
@@ -18,11 +18,15 @@ use rmcp::transport::{
 use serde_json::json;
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 use tokio_util::sync::CancellationToken;
-use tower_http::cors::{Any, CorsLayer};
-use tracing::{error, info};
+use tower_http::{
+    cors::{Any, CorsLayer},
+    trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer},
+};
+use tracing::{Level, error, info};
 
 const BIND_ADDRESS: &str = "127.0.0.1:3000";
 const REMOTE_ADDRESS: &str = "https://m.evenscribe.com";
+pub const USER_ID_HEADER: &str = "x-evenscribe-header";
 
 #[derive(Clone, Debug)]
 struct McpAppState {
@@ -43,7 +47,7 @@ impl McpAppState {
 
 async fn validate_token_middleware(
     State(token_store): State<Arc<McpAppState>>,
-    request: Request<axum::body::Body>,
+    mut request: Request<axum::body::Body>,
     next: Next,
 ) -> Response {
     let auth_header = request.headers().get("Authorization");
@@ -61,11 +65,18 @@ async fn validate_token_middleware(
             return StatusCode::UNAUTHORIZED.into_response();
         }
     };
-    let claims = token::check_token(token, &Arc::clone(&token_store.jwks)).await;
-    match claims {
-        Ok(_) => next.run(request).await,
-        Err(_) => StatusCode::UNAUTHORIZED.into_response(),
-    }
+
+    let token_data = match token::check_token(token, &Arc::clone(&token_store.jwks)).await {
+        Ok(claims) => claims,
+        Err(_) => return StatusCode::UNAUTHORIZED.into_response(),
+    };
+
+    let _ = request.headers_mut().insert(
+        USER_ID_HEADER,
+        HeaderValue::from_str(&token_data.claims.sub).unwrap(),
+    );
+
+    next.run(request).await
 }
 
 async fn oauth_protected_resource_server() -> impl IntoResponse {
@@ -135,6 +146,20 @@ fn build_stream_http(app_state: Arc<McpAppState>) -> Router {
             app_state,
             validate_token_middleware,
         ))
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(
+                    DefaultMakeSpan::new()
+                        .include_headers(true)
+                        .level(Level::INFO),
+                )
+                .on_request(DefaultOnRequest::new().level(Level::INFO))
+                .on_response(
+                    DefaultOnResponse::new()
+                        .level(Level::INFO)
+                        .latency_unit(tower_http::LatencyUnit::Millis),
+                ),
+        )
 }
 
 fn build_sse(addr: SocketAddr, app_state: Arc<McpAppState>) -> Router {
@@ -148,10 +173,25 @@ fn build_sse(addr: SocketAddr, app_state: Arc<McpAppState>) -> Router {
 
     let (sse_server, sse_router) = SseServer::new(sse_config);
     sse_server.with_service(service::McpService::new);
-    sse_router.layer(middleware::from_fn_with_state(
-        app_state,
-        validate_token_middleware,
-    ))
+    sse_router
+        .layer(middleware::from_fn_with_state(
+            app_state,
+            validate_token_middleware,
+        ))
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(
+                    DefaultMakeSpan::new()
+                        .include_headers(true)
+                        .level(Level::INFO),
+                )
+                .on_request(DefaultOnRequest::new().level(Level::INFO))
+                .on_response(
+                    DefaultOnResponse::new()
+                        .level(Level::INFO)
+                        .latency_unit(tower_http::LatencyUnit::Millis),
+                ),
+        )
 }
 
 fn build_auth_router(app_state: Arc<McpAppState>) -> Router {
