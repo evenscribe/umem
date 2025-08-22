@@ -1,0 +1,10 @@
+target/
+.git/
+.env
+*.md
+.gitignore
+todo.txt
+crates/*/target/
+crates/umem_vector/debug/
+.dockerignore
+Dockerfile
