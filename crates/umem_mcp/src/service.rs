@@ -71,14 +71,21 @@ impl McpService {
                 None,
             ));
         }
-        let _ = MemoryController::add_memory(generated::Memory {
+
+        let memory = MemoryController::add_memory(generated::Memory {
             user_id,
             content: text,
             ..Default::default()
         })
-        .await;
+        .await
+        .unwrap();
 
-        Ok(CallToolResult::success(vec![]))
+        Ok(CallToolResult::success(vec![Annotated::new(
+            RawContent::Text(RawTextContent {
+                text: serde_json::to_string(&memory).unwrap(),
+            }),
+            None,
+        )]))
     }
 
     #[tool(

@@ -4,11 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow.workspace = true
-qdrant-client = "1.14.0"
+anyhow = { workspace = true }
+qdrant-client = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 tonic = "0.13.1"
 serde_json = {workspace = true}
 chrono = {workspace = true}
 serde = {workspace = true}
 uuid = {workspace = true, features=["v4"]}
+umem_utils = {workspace = true }

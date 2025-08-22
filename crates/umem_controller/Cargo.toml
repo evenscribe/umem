@@ -10,4 +10,7 @@ lazy_static = { workspace = true}
 umem_vector = { workspace = true}
 umem_embeddings = { workspace = true}
 umem_proto_generated = { workspace = true}
-anyhow = { workspace = true}
+anyhow = { workspace = true }
+chrono = {workspace = true}
+qdrant-client = { workspace = true }
+uuid = { workspace = true }

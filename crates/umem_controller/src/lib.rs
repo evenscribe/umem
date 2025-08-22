@@ -5,6 +5,7 @@ use tokio::sync::OnceCell;
 use umem_embeddings::Embedder;
 use umem_proto_generated::generated;
 use umem_vector::QdrantVectorStore;
+use uuid::Uuid;
 
 static MEMORY_STORE: OnceCell<QdrantVectorStore> = OnceCell::const_new();
 
@@ -34,13 +35,24 @@ lazy_static! {
 pub struct MemoryController;
 
 impl MemoryController {
-    pub async fn add_memory(memory: generated::Memory) -> Result<()> {
+    pub async fn add_memory(memory: generated::Memory) -> Result<generated::Memory> {
         let memory_store = get_memory_store().await;
+
+        let now = chrono::Utc::now().timestamp();
+        let memory = generated::Memory {
+            memory_id: Uuid::new_v4().to_string(),
+            updated_at: now,
+            created_at: now,
+            ..memory
+        };
+
         let vectors = CFEmbeder
             .generate_embedding(memory.content.as_str())
             .await?;
-        memory_store.insert_embedding(memory, vectors).await?;
-        Ok(())
+        memory_store
+            .insert_embedding(memory.clone(), vectors)
+            .await?;
+        Ok(memory)
     }
 
     pub async fn add_memory_bulk(memory_bulk: generated::MemoryBulk) -> Result<()> {

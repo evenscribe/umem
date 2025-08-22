@@ -12,6 +12,7 @@ use qdrant_client::{
 };
 use serde::Serialize;
 use serde_json::json;
+use umem_utils::QdrantIdentifiable;
 use uuid::Uuid;
 
 pub struct QdrantVectorStore {
@@ -55,22 +56,18 @@ impl QdrantVectorStore {
         })
     }
 
-    pub async fn insert_embedding<S: Serialize>(
+    pub async fn insert_embedding<S: Serialize + QdrantIdentifiable>(
         &self,
         payload: S,
         vectors: Vec<f32>,
     ) -> Result<()> {
-        let mut payload = Payload::try_from(json!(payload))?;
-        let uuid = Uuid::new_v4().to_string();
-        payload.insert("memory_id", uuid.as_str());
-        let now = chrono::Utc::now().timestamp();
-        payload.insert("created_at", now);
-        payload.insert("updated_at", now);
+        let point_id = payload.get_id();
+        let payload = Payload::try_from(json!(payload))?;
         self.client
             .upsert_points(UpsertPointsBuilder::new(
                 self.collection_name.as_str(),
                 [PointStruct::new(
-                    PointId::from(uuid.as_str()),
+                    PointId::from(point_id.into()),
                     vectors,
                     payload,
                 )],
