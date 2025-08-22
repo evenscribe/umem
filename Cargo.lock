@@ -10,6 +10,7 @@ dependencies = [
  "chrono",
  "dirs",
  "dotenv",
+ "qdrant-client",
  "reqwest",
  "rmcp",
  "serde",
@@ -24,6 +25,7 @@ dependencies = [
  "umem_proto_generated",
  "umem_search",
  "umem_summarizer",
+ "umem_utils",
  "uuid",
 ]
 
@@ -3682,12 +3684,15 @@ name = "umem_controller"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "lazy_static",
+ "qdrant-client",
  "serde_json",
  "tokio",
  "umem_embeddings",
  "umem_proto_generated",
  "umem_vector",
+ "uuid",
 ]
 
 [[package]]
@@ -3765,6 +3770,7 @@ dependencies = [
  "tokio",
  "tonic 0.12.3",
  "tonic-build",
+ "umem_utils",
 ]
 
 [[package]]
@@ -3793,6 +3799,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "umem_utils"
+version = "0.1.0"
+dependencies = [
+ "qdrant-client",
+]
+
+[[package]]
 name = "umem_vector"
 version = "0.1.0"
 dependencies = [
@@ -3803,6 +3816,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tonic 0.13.1",
+ "umem_utils",
  "uuid",
 ]
 
