@@ -151,12 +151,12 @@ fn build_stream_http(app_state: Arc<McpAppState>) -> Router {
                 .make_span_with(
                     DefaultMakeSpan::new()
                         .include_headers(true)
-                        .level(Level::INFO),
+                        .level(Level::DEBUG),
                 )
-                .on_request(DefaultOnRequest::new().level(Level::INFO))
+                .on_request(DefaultOnRequest::new().level(Level::DEBUG))
                 .on_response(
                     DefaultOnResponse::new()
-                        .level(Level::INFO)
+                        .level(Level::DEBUG)
                         .latency_unit(tower_http::LatencyUnit::Millis),
                 ),
         )
@@ -183,12 +183,12 @@ fn build_sse(addr: SocketAddr, app_state: Arc<McpAppState>) -> Router {
                 .make_span_with(
                     DefaultMakeSpan::new()
                         .include_headers(true)
-                        .level(Level::INFO),
+                        .level(Level::DEBUG),
                 )
-                .on_request(DefaultOnRequest::new().level(Level::INFO))
+                .on_request(DefaultOnRequest::new().level(Level::DEBUG))
                 .on_response(
                     DefaultOnResponse::new()
-                        .level(Level::INFO)
+                        .level(Level::DEBUG)
                         .latency_unit(tower_http::LatencyUnit::Millis),
                 ),
         )

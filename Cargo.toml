@@ -18,6 +18,7 @@ umem_summarizer = {path = "crates/umem_summarizer"}
 umem_proto_generated = {path = "crates/umem_proto_generated"}
 umem_controller = {path = "crates/umem_controller"}
 umem_mcp = {path = "crates/umem_mcp"}
+umem_utils = {path = "crates/umem_utils"}
 anyhow = "1.0.98"
 tokio = { version = "1.45.1", features = ["macros","rt-multi-thread","rt"] }
 serde_json = "1.0.140"
@@ -32,6 +33,7 @@ tracing-subscriber = {version="0.3.19", features = ["env-filter", "fmt", "chrono
 tracing = "0.1.41"
 tracing-appender = "0.2.3"
 dirs = "6.0.0"
+qdrant-client = "1.14.0"
 
 [dependencies]
 umem_search = { workspace = true }
@@ -40,6 +42,7 @@ umem_summarizer = { workspace = true }
 umem_controller = { workspace = true }
 umem_proto_generated = { workspace = true }
 umem_mcp = { workspace = true }
+umem_utils = { workspace = true }
 anyhow = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "signal"] }
 serde_json = { workspace = true }
@@ -53,3 +56,4 @@ tracing-subscriber = { workspace = true }
 tracing = { workspace = true }
 tracing-appender = { workspace = true }
 dirs = { workspace = true }
+qdrant-client = { workspace = true }
