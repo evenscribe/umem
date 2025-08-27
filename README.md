@@ -33,9 +33,13 @@ QDRANT_COLLECTION_NAME=umem_memories
 CLOUDFLARE_ACCOUNT_ID=your_account_id
 CLOUDFLARE_API_TOKEN=your_api_token
 
-# OAuth Authentication
-JWKS_URL=https://api.workos.com/sso/jwks/your_connection_id
 WORKOS_AUTHKIT_URL=https://your-domain.workos.com
+WORKOS_CLIENT_ID=your_workos_client_id
+WORKOS_CLIENT_SECRET=your_workos_client_secret
+
+# SQLite Database
+SQL_LITE_URL=sqlite://umem.db
+SQL_AUTH_TOKEN=your_sql_auth_token
 ```
 
 ### Installation & Running
