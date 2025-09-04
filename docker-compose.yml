@@ -1,0 +1,30 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    restart: unless-stopped
+
+  umem:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+      - "5051:5051"
+    environment:
+      - QDRANT_URL=http://qdrant:6334
+      - QDRANT_KEY=${QDRANT_KEY:-}
+      - QDRANT_COLLECTION_NAME=${QDRANT_COLLECTION_NAME:-umem_collection}
+      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+      - SQL_LITE_URL=${SQL_LITE_URL}
+      - SQL_AUTH_TOKEN=${SQL_AUTH_TOKEN}
+      - JWKS_URL=${JWKS_URL}
+      - WORKOS_CLIENT_ID=${WORKOS_CLIENT_ID}
+      - WORKOS_CLIENT_SECRET=${WORKOS_CLIENT_SECRET}
+      - WORKOS_AUTHKIT_URL=${WORKOS_AUTHKIT_URL}
+    depends_on:
+      - qdrant
+    restart: unless-stopped
