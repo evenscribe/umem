@@ -23,6 +23,12 @@ pub struct GetMemoriesByQueryRequest {
     pub query: String,
 }
 
+#[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
+pub struct UpdateMememoryRequest {
+    pub memory_id: String,
+    pub content: String,
+}
+
 #[derive(Clone, Default)]
 pub struct McpService {
     tool_router: ToolRouter<Self>,
@@ -138,6 +144,23 @@ impl McpService {
             RawContent::Text(RawTextContent { text: memory_bulk }),
             None,
         )]))
+    }
+
+    #[tool(
+        name = "update_memory",
+        description = "Update an existing memory in the umem persistence layer. This tool should be used to modify, correct, or enhance existing memories rather than creating duplicates. WHEN TO USE: (1) When user preferences or details change and need to be updated in existing memories, (2) When previously stored information becomes outdated or incorrect, (3) When additional context or clarification needs to be added to existing memories, (4) When consolidating or refining memories to avoid redundancy, (5) When correcting errors or inaccuracies in stored memories. CRITICAL: Always prefer updating existing memories over creating new ones when the information relates to the same topic or entity - this prevents memory fragmentation and maintains clean, consolidated user context. Use get_memory_by_query first to locate relevant existing memories before deciding whether to update or add new memories. This tool is essential for maintaining accurate, up-to-date user context and should be used proactively whenever stored information needs modification."
+    )]
+    async fn update_memory(
+        &self,
+        Parameters(UpdateMememoryRequest { content, memory_id }): Parameters<UpdateMememoryRequest>,
+    ) -> Result<CallToolResult, McpError> {
+        let parameters = generated::UpdateMemoryParameters {
+            memory_id,
+            content,
+            ..Default::default()
+        };
+        MemoryController::update_memory(parameters).await.unwrap();
+        Ok(CallToolResult::success(vec![]))
     }
 }
 
