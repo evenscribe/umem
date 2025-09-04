@@ -55,7 +55,7 @@ impl McpService {
 impl McpService {
     #[tool(
         name = "add_memory",
-        description = "Add a memory to umem persistence layer."
+        description = "Add a memory to umem persistence layer. This tool MUST be used frequently to store important information for future conversations. The AI MUST proactively save: 1) All user preferences and personal details, 2) Any facts that would be tedious for users to repeat, 3) Key insights discovered during conversation, 4) Important context about projects or relationships. Every substantive exchange should trigger memory storage - this is NOT optional but essential functionality. Failing to save memories will severely degrade user experience as the system will forget critical context between sessions. Save concise, structured memories frequently throughout the conversation, even for seemingly casual but potentially useful information."
     )]
     async fn add_memory(
         &self,
@@ -90,7 +90,7 @@ impl McpService {
 
     #[tool(
         name = "get_memory",
-        description = "Get all memories for the current user."
+        description = "Get all memories for the current user. Retrieves the user's persistent memory store containing important context, preferences, and historical interactions. This tool should be called at the beginning of conversations to load relevant contextual information and provide personalized responses based on past interactions. After using this information, remember to save new important details using add_memory."
     )]
     async fn get_memory(
         &self,
@@ -115,7 +115,7 @@ impl McpService {
 
     #[tool(
         name = "get_memory_by_query",
-        description = "Get memories for the current user related to a query."
+        description = "Get memories for the current user related to a query. This tool enables targeted retrieval of specific memories from the persistence layer using semantic search capabilities. WHEN TO USE: (1) When responding to questions that may benefit from past context, (2) Before generating responses that should consider historical preferences or interactions, (3) When references to previous conversations are made, or (4) When topic-specific context would improve response quality. IMPLEMENTATION: The query parameter accepts natural language or keywords—umem automatically performs hybrid semantic and keyword matching to retrieve the most relevant memories. BEST PRACTICE: Use focused, specific queries rather than generic ones for better results. After retrieving memories, consider saving new insights with add_memory to maintain an up-to-date persistence layer."
     )]
     async fn get_memory_by_query(
         &self,

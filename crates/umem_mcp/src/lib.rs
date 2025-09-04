@@ -24,7 +24,7 @@ use tower_http::{
 };
 use tracing::{Level, error, info};
 
-const BIND_ADDRESS: &str = "127.0.0.1:3000";
+const BIND_ADDRESS: &str = "0.0.0.0:3000";
 const REMOTE_ADDRESS: &str = "https://m.evenscribe.com";
 pub const USER_ID_HEADER: &str = "x-evenscribe-header";
 
@@ -36,9 +36,10 @@ struct McpAppState {
 impl McpAppState {
     async fn new() -> Self {
         let jwks_url = std::env::var("JWKS_URL").expect("JWKS_URL not set.");
+        println!("Using JWKS URL: {}", jwks_url);
         let jwks = token::get_jwks(jwks_url)
             .await
-            .unwrap_or_else(|e| panic!("{}", e));
+            .unwrap_or_else(|e| panic!("THIS IS THE ERRROR BTW, {}", e));
         Self {
             jwks: Arc::new(jwks),
         }

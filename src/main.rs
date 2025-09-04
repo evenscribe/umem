@@ -11,7 +11,7 @@ async fn main() -> Result<()> {
 
     let mcp_handle = tokio::spawn(async move { umem_mcp::run_server().await });
     let grpc_handle =
-        tokio::spawn(async move { MemoryServiceGrpc::run_server("[::1]:50051").await });
+        tokio::spawn(async move { MemoryServiceGrpc::run_server("0.0.0.0:5050").await });
 
     let _ = tokio::try_join!(mcp_handle, grpc_handle)?;
 
